@@ -6,10 +6,10 @@ import { EvaluateResponseSchema, ComparisonInputSchema } from "../../supabase/fu
 import { IdentityRequestSchema } from "../../supabase/functions/_shared/contracts/identity.ts";
 import { RecordsRequestSchema, SavedRoundSnapshotSchema } from "../../supabase/functions/_shared/contracts/records.ts";
 const id = "91b264f0-6e12-4df4-9b2a-000000000001";
-const dimension = { similarity: null, aEvidence: [], bEvidence: [], explanation: "无法判断" };
+const dimension = { similarity: null, aEvidence: [], bEvidence: [], explanation: "Cannot determine." };
 const unknown = {
   status: "insufficient", dimensions: { imagery: dimension, association: dimension, orientation: dimension },
-  summary: "线索不足", commonality: [], divergence: [], unknowns: ["无法判断联想方式"],
+  summary: "Insufficient evidence", commonality: [], divergence: [], unknowns: ["The imaginative path is unclear."],
   coverage: 0, distance: null, rubricVersion: "fmp-v1", modelId: "test-only",
 };
 
@@ -23,7 +23,7 @@ test("unknown is null; fabricated distance and prediction fields are rejected", 
 });
 
 test("coverage boundary and fmp-v1 distance are enforced", () => {
-  const scored = { similarity: 3, aEvidence: ["雨伞"], bEvidence: ["杯子"], explanation: "小改变" };
+  const scored = { similarity: 3, aEvidence: ["umbrella"], bEvidence: ["cup"], explanation: "A small change" };
   const partial = { ...unknown, status: "ok", dimensions: { ...unknown.dimensions, imagery: scored }, coverage: 0.25 };
   assert.ok(RoundResultSchema.safeParse(partial).success);
   const enough = { ...partial, dimensions: { ...unknown.dimensions, association: scored }, coverage: 0.5, distance: 250 };
@@ -34,18 +34,18 @@ test("coverage boundary and fmp-v1 distance are enforced", () => {
 });
 
 test("exact quotes belong to the correct answer; Unicode limits use code points", () => {
-  const d = { similarity: 4, leftEvidence: ["雨伞"], rightEvidence: ["杯子"], explanation: "🌙".repeat(120) };
-  const model = { status: "ok", dimensions: { imagery: d, association: d, orientation: d }, summary: "解释", commonality: [], divergence: [], unknowns: [] };
-  assert.ok(createModelComparisonSchema("移动雨伞", "移动杯子").safeParse(model).success);
-  assert.equal(createModelComparisonSchema("移动杯子", "移动雨伞").safeParse(model).success, false);
-  assert.equal(ModelComparisonSchema.safeParse({ ...model, summary: "🌙".repeat(121) }).success, false);
+  const d = { similarity: 4, leftEvidence: ["umbrella"], rightEvidence: ["cup"], explanation: "🧩".repeat(120) };
+  const model = { status: "ok", dimensions: { imagery: d, association: d, orientation: d }, summary: "Explanation", commonality: [], divergence: [], unknowns: [] };
+  assert.ok(createModelComparisonSchema("Move the umbrella", "Move the cup").safeParse(model).success);
+  assert.equal(createModelComparisonSchema("Move the cup", "Move the umbrella").safeParse(model).success, false);
+  assert.equal(ModelComparisonSchema.safeParse({ ...model, summary: "🧩".repeat(121) }).success, false);
   assert.equal(ModelComparisonSchema.safeParse({ ...model, dimensions: { ...model.dimensions, imagery: { ...d, similarity: 2.5 } } }).success, false);
 });
 
 test("public request schemas reject extra/private scoring fields and bad inputs", () => {
   const submit = { action: "submit", roomId: id, requestId: id, roundIndex: 1, answer: " hi " };
   assert.ok(GameRequestSchema.safeParse(submit).success);
-  for (const bad of [{ ...submit, answer: " " }, { ...submit, answer: "字".repeat(301) },
+  for (const bad of [{ ...submit, answer: " " }, { ...submit, answer: "x".repeat(301) },
     { ...submit, roundIndex: 4 }, { ...submit, distance: 0 }, { ...submit, roomId: "bad" }]) {
     assert.equal(GameRequestSchema.safeParse(bad).success, false);
   }
@@ -55,7 +55,7 @@ test("public request schemas reject extra/private scoring fields and bad inputs"
 });
 
 test("technical failure uses error envelope, not an insufficient comparison", () => {
-  const failure = { data: null, error: { code: "EVALUATION_FAILED", message: "请重试", retryable: true }, requestId: id };
+  const failure = { data: null, error: { code: "EVALUATION_FAILED", message: "Please try again", retryable: true }, requestId: id };
   assert.ok(EvaluateResponseSchema.safeParse(failure).success);
   assert.equal(RoundResultSchema.safeParse(failure).success, false);
   assert.ok(EvaluateResponseSchema.safeParse({ data: { status: "ready", result: unknown }, error: null, requestId: id }).success);
@@ -73,7 +73,7 @@ test("shared snapshot embeds final result; collection whitelist rejects evidence
   assert.ok(GameSnapshotSchema.safeParse(snapshot).success);
   const invalidSnapshot = { ...snapshot, revealedRounds: [{ ...snapshot.revealedRounds[0], result: { ...unknown, distance: 1000 } }] };
   assert.equal(GameSnapshotSchema.safeParse(invalidSnapshot).success, false);
-  const saved = { roundIndex: 1, prompt, distance: null, coverage: 0, summary: "不足", commonality: [], divergence: [], unknowns: [], rubricVersion: "fmp-v1", modelId: "test-only" };
+  const saved = { roundIndex: 1, prompt, distance: null, coverage: 0, summary: "Insufficient evidence", commonality: [], divergence: [], unknowns: [], rubricVersion: "fmp-v1", modelId: "test-only" };
   assert.ok(SavedRoundSnapshotSchema.safeParse(saved).success);
   assert.equal(SavedRoundSnapshotSchema.safeParse({ ...saved, evidence: ["private"] }).success, false);
 });

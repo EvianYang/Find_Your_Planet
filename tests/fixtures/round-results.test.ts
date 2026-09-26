@@ -8,7 +8,7 @@ test("all six demo scenarios use the shared response schema", () => {
   assert.deepEqual(ROUND_RESULT_FIXTURES.map((f) => f.scenario), ["close", "medium", "far", "partial", "insufficient", "technical-failure"]);
   for (const f of ROUND_RESULT_FIXTURES) {
     assert.equal(f.isDemo, true);
-    assert.match(f.label, /演示样例/);
+    assert.match(f.label, /Demo sample/);
     assert.ok(EvaluateResponseSchema.safeParse(f.response).success);
   }
 });
@@ -53,9 +53,9 @@ test("partial understanding and insufficient evidence are distinct unknowns", ()
   assert.ok(data.result.commonality.length > 0);
 });
 
-test("demo interpretations are English and player names contain no demo suffix", () => {
+test("demo interpretations and explicit demo player names are English", () => {
   for (const fixture of ROUND_RESULT_FIXTURES) {
-    assert.deepEqual(fixture.players.map((p) => p.nickname), ["Alex", "Sam"]);
+    assert.deepEqual(fixture.players.map((p) => p.nickname), ["Alex (demo)", "Sam (demo)"]);
     const data = fixture.response.data;
     if (!data || data.status !== "ready") continue;
     const r = data.result;
@@ -65,5 +65,12 @@ test("demo interpretations are English and player names contain no demo suffix",
       assert.match(text, /[A-Za-z]/);
       assert.doesNotMatch(text, /\p{Script=Han}/u);
     }
+  }
+});
+
+
+test("all demo content is English, including labels and errors", () => {
+  for (const fixture of ROUND_RESULT_FIXTURES) {
+    assert.doesNotMatch(JSON.stringify(fixture), /[\u4e00-\u9fff]/u);
   }
 });
