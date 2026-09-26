@@ -2,7 +2,7 @@
 
 We can look at the same thing—but do we see the same world?*
 
-Find Your Planet is a social mini-game about how well we understand each other. You and someone you know answer imaginative questions, predict each other’s answers, and discover where your inner worlds meet—and where they drift apart.
+Find Your Planet is an AI-powered shared listening experience that connects two distant people through two different songs under the same moon. AI discovers the emotional resonance between their listening moments, while their music becomes two different real-time tides.
 
 The project interprets **“Find Your Planet”** through dreams, distance, and connection. Its inspiration is captured in the line:
 
@@ -18,8 +18,7 @@ Invite a friend, partner, or someone you think you know well. Across three round
 
 1. **Imagine.** Both players receive the same open-ended question.
 2. **Answer.** Privately write your own answer.
-3. **Predict.** Guess what the other person wrote.
-4. **Reveal.** See your answers and predictions side by side.
-5. **Discover.** AI interprets what each prediction understood and what it missed, while an animated lunar scene brings the distance between your perspectives to life.
+3. **Reveal.** See your answers side by side.
+4. **Discover.** AI interprets what each prediction understood and what it missed, while an animated lunar scene brings the distance between your perspectives to life.
 
 At the end, a shared result reflects what you learned about each other.
