@@ -111,9 +111,11 @@ Or:
 ## Developer starting points / 开发入口
 
 The repository contains a runnable React/TypeScript/Vite shell, shared contracts,
-anonymous identity, and the task 2.2 room create/join backend. Starting games,
-answer submission, AI evaluation, records, and the product UI are not implemented
-yet.
+anonymous identity, room creation/joining, game start, immutable private answer
+submission, evaluation, refresh/reconnect synchronization, round continuation,
+and recovery-code identity transfer. Tasks 2.6–2.9 remain pending remote acceptance
+until their migrations and functions are deployed. Records and the integrated
+product UI are not implemented yet.
 
 | Role | Start here | First handoff |
 |---|---|---|
@@ -172,7 +174,7 @@ This command uses `.env.local` and creates two test anonymous users and profiles
 in the linked Supabase project; they remain there until test-data cleanup is
 implemented. Generated test records use English-only labels. Its output never
 includes JWTs or recovery codes. Identity recovery and recovery-code rotation
-are task 2.9 and are intentionally not part of this check.
+have a separate task 2.9 check below.
 
 Task 2.2 adds transactional room creation and joining. The host always occupies
 slot A; a row lock plus database uniqueness constraints allow exactly one slot B
@@ -214,12 +216,39 @@ Run the remote acceptance check with:
 
 ```bash
 npm run verify:submit
+npm run verify:evaluate
 ```
 
-The test verifies same-answer replay, conflicting-answer rejection, phase
-advancement only after both submissions, snapshots containing only the viewer's
-own answer, member-only reads of public room columns, and denied browser access
-to private room columns, rounds, and submission bodies.
+The submission test verifies same-answer replay, conflicting-answer rejection,
+phase advancement only after both submissions, snapshots containing only the
+viewer's own answer, member-only reads of public room columns, and denied browser
+access to private room columns, rounds, and submission bodies. The evaluation test
+makes a billable real-provider call and should run only after migration 005 and the
+`evaluate` function are deployed with `LLM_API_KEY` and `LLM_MODEL` configured.
+
+Task 2.7 implements viewer-specific snapshot refresh after Realtime notifications,
+rejects older revisions, refreshes after reconnect/focus, and polls every three
+seconds only while the page is active and Realtime is unavailable. Revision
+ordering has a local test; browser disconnect/reconnect behavior remains a manual
+integration check.
+
+Task 2.8 stores each player's continue choice transactionally. One player waits,
+repeated requests do not advance twice, and the second player advances to the next
+round or finishes round three. Its remote check performs three real model calls:
+
+```bash
+npm run verify:continue
+```
+
+Task 2.9 transfers a profile to a fresh anonymous session, rotates the recovery
+code, invalidates the old auth binding, limits failures by both auth identity and
+hashed request source, and handles replayed request IDs without rotating twice.
+Its remote check intentionally submits one expired code but does not exhaust the
+shared source rate limit:
+
+```bash
+npm run verify:recovery
+```
 
 Dependencies are pinned exactly in `package.json` and `package-lock.json`. Run these commands from the existing repository root; do not create a nested project.
 
@@ -233,8 +262,8 @@ Find_Your_Planet/
 │   ├── screens/          A: six screen placeholders
 │   ├── components/       A: four component placeholders
 │   ├── styles/           A: CSS placeholders
-│   ├── services/         B: client placeholders
-│   ├── hooks/            B: session placeholder
+│   ├── services/         B: identity, game and evaluation clients
+│   ├── hooks/            B: snapshot synchronization and reconnect
 │   └── fixtures/         C: sample-data placeholder
 ├── supabase/
 │   ├── migrations/
@@ -253,8 +282,10 @@ Find_Your_Planet/
 ```
 
 Unimplemented backend/test directories retain `.gitkeep` placeholders. The
-implemented `identity` and `game` functions and their migrations are deployable;
-other placeholder modules are not. C's evaluation handoff is documented in
+implemented `identity`, `game`, and `evaluate` functions and their migrations are
+deployable; tasks 2.6–2.9 remain unverified until their remote integration checks
+pass.
+C's evaluation handoff is documented in
 [HANDOFF_C_EVALUATION](docs/HANDOFF_C_EVALUATION.md). Role guides link to the
 existing checklist task numbers; no tasks are automatically marked complete.
 

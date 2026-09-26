@@ -98,3 +98,20 @@ export async function submitAnswer(
   }
   return response.data;
 }
+
+export async function continueGame(
+  roomId: string,
+  roundIndex: 1 | 2 | 3,
+  requestId = crypto.randomUUID(),
+): Promise<GameSnapshot> {
+  const { data, error } = await getSupabaseClient().functions.invoke("game", {
+    body: { action: "continue", roomId, roundIndex, requestId },
+  });
+  const response = GameSnapshotResponseSchema.parse(
+    error ? await readFunctionError(error) : data,
+  );
+  if (response.error) {
+    throw new Error(`${response.error.code}: ${response.error.message}`);
+  }
+  return response.data;
+}

@@ -1,4 +1,4 @@
-import type { User } from "@supabase/supabase-js";
+import { FunctionsHttpError, type User } from "@supabase/supabase-js";
 
 import {
   IdentityDataResponseSchema,
@@ -8,6 +8,12 @@ import {
 } from "@contracts/identity.ts";
 
 import { getSupabaseClient } from "./supabase-client.ts";
+
+async function readFunctionPayload(data: unknown, error: unknown): Promise<unknown> {
+  if (!error) return data;
+  if (error instanceof FunctionsHttpError) return error.context.json();
+  throw error;
+}
 
 function requireAnonymousUser(user: User | null): User {
   if (!user) {
@@ -64,11 +70,9 @@ export async function getIdentityProfile(): Promise<IdentityProfile | null> {
     body: { action: "me" },
   });
 
-  if (error) {
-    throw new Error(`Could not read the profile: ${error.message}`);
-  }
-
-  const response = IdentityMeResponseSchema.parse(data);
+  const response = IdentityMeResponseSchema.parse(
+    await readFunctionPayload(data, error),
+  );
   if (response.error) {
     throw new Error(`${response.error.code}: ${response.error.message}`);
   }
@@ -79,6 +83,7 @@ export async function getIdentityProfile(): Promise<IdentityProfile | null> {
 export async function createIdentityProfile(
   nickname: string,
 ): Promise<IdentityData> {
+  await ensureAnonymousUser();
   const supabase = getSupabaseClient();
   const { data, error } = await supabase.functions.invoke("identity", {
     body: {
@@ -88,15 +93,49 @@ export async function createIdentityProfile(
     },
   });
 
-  if (error) {
-    throw new Error(`Could not create the profile: ${error.message}`);
-  }
-
-  const response = IdentityDataResponseSchema.parse(data);
+  const response = IdentityDataResponseSchema.parse(
+    await readFunctionPayload(data, error),
+  );
   if (response.error) {
     throw new Error(`${response.error.code}: ${response.error.message}`);
   }
 
+  return response.data;
+}
+
+export async function recoverIdentityProfile(
+  recoveryCode: string,
+  requestId = crypto.randomUUID(),
+): Promise<IdentityData> {
+  await ensureAnonymousUser();
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase.functions.invoke("identity", {
+    body: { action: "recover", recoveryCode, requestId },
+  });
+  const response = IdentityDataResponseSchema.parse(
+    await readFunctionPayload(data, error),
+  );
+  if (response.error) {
+    throw new Error(`${response.error.code}: ${response.error.message}`);
+  }
+  await supabase.removeAllChannels();
+  return response.data;
+}
+
+export async function rotateRecoveryCode(
+  requestId = crypto.randomUUID(),
+): Promise<IdentityData> {
+  await ensureAnonymousUser();
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase.functions.invoke("identity", {
+    body: { action: "rotate_recovery", requestId },
+  });
+  const response = IdentityDataResponseSchema.parse(
+    await readFunctionPayload(data, error),
+  );
+  if (response.error) {
+    throw new Error(`${response.error.code}: ${response.error.message}`);
+  }
   return response.data;
 }
 

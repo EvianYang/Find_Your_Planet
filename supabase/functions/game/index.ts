@@ -11,6 +11,7 @@ import {
   PromptSchema,
   type Prompt,
 } from "../_shared/contracts/game.ts";
+import { RoundResultSchema } from "../_shared/contracts/evaluation.ts";
 import { CURATED_PROMPTS } from "../_shared/content/prompts.ts";
 
 type JsonRecord = Record<string, unknown>;
@@ -36,13 +37,16 @@ type ParticipantRow = {
 };
 type RoundRow = {
   id: string;
+  round_index: number;
   prompt_json: unknown;
+  result_json: unknown;
   evaluation_state: string;
   continued_a: boolean;
   continued_b: boolean;
 };
-type SubmissionRow = { profile_id: string; body: string };
+type SubmissionRow = { round_id: string; profile_id: string; body: string };
 type SubmittedRoomRow = { status: string; submitted_room_id: string | null };
+type ContinuedRoomRow = { status: string; continued_room_id: string | null };
 
 const responseHeaders = {
   ...corsHeaders,
@@ -157,29 +161,33 @@ async function loadSnapshot(
     return { ok: false, code: "EXPIRED" };
   }
 
-  let round: RoundRow | null = null;
+  let rounds: RoundRow[] = [];
   if (room.current_round > 0) {
     const { data, error } = await adminClient
       .from("rounds")
-      .select("id,prompt_json,evaluation_state,continued_a,continued_b")
+      .select("id,round_index,prompt_json,result_json,evaluation_state,continued_a,continued_b")
       .eq("room_id", roomId)
-      .eq("round_index", room.current_round)
-      .maybeSingle<RoundRow>();
+      .order("round_index")
+      .returns<RoundRow[]>();
     if (error) throw error;
-    if (!data) throw new Error("The current round is missing.");
-    round = data;
+    rounds = data ?? [];
   }
+  const round = rounds.find((candidate) => candidate.round_index === room.current_round) ?? null;
+  if (room.current_round > 0 && !round) throw new Error("The current round is missing.");
 
-  let submissions: SubmissionRow[] = [];
-  if (round) {
+  let allSubmissions: SubmissionRow[] = [];
+  if (rounds.length > 0) {
     const { data, error } = await adminClient
       .from("submissions")
-      .select("profile_id,body")
-      .eq("round_id", round.id)
+      .select("round_id,profile_id,body")
+      .in("round_id", rounds.map((candidate) => candidate.id))
       .returns<SubmissionRow[]>();
     if (error) throw error;
-    submissions = data ?? [];
+    allSubmissions = data ?? [];
   }
+  const submissions = round
+    ? allSubmissions.filter((submission) => submission.round_id === round.id)
+    : [];
 
   const profileBySlot = new Map(
     participants.map((participant) => [participant.slot, participant.profile_id]),
@@ -209,8 +217,44 @@ async function loadSnapshot(
       b: round?.continued_b ?? false,
     },
     evaluationState: round?.evaluation_state ?? "idle",
-    revealedRounds: [],
-    overall: null,
+    revealedRounds: rounds
+      .filter((candidate) => candidate.evaluation_state === "ready" && candidate.result_json)
+      .map((candidate) => {
+        const roundSubmissions = allSubmissions.filter(
+          (submission) => submission.round_id === candidate.id,
+        );
+        return {
+          roundIndex: candidate.round_index,
+          prompt: candidate.prompt_json,
+          answers: {
+            a: roundSubmissions.find(
+              (submission) => submission.profile_id === profileBySlot.get("A"),
+            )?.body,
+            b: roundSubmissions.find(
+              (submission) => submission.profile_id === profileBySlot.get("B"),
+            )?.body,
+          },
+          result: candidate.result_json,
+        };
+      }),
+    overall: room.phase === "finished"
+      ? (() => {
+        const validDistances = rounds
+          .filter((candidate) => candidate.evaluation_state === "ready")
+          .map((candidate) => RoundResultSchema.parse(candidate.result_json).distance)
+          .filter((distance): distance is number => distance !== null);
+        return {
+          overallDistance: validDistances.length >= 2
+            ? Math.round(
+              validDistances.reduce((sum, distance) => sum + distance, 0) /
+                validDistances.length,
+            )
+            : null,
+          validRounds: validDistances.length,
+          totalRounds: 3,
+        };
+      })()
+      : null,
   });
 
   return { ok: true, snapshot };
@@ -270,6 +314,16 @@ function submitFailure(requestId: string, status: string): Response {
   return failure(requestId, "NOT_FOUND", "Room not found.", false, 404);
 }
 
+function continueFailure(requestId: string, status: string): Response {
+  if (status === "INVALID_PHASE") {
+    return failure(requestId, "INVALID_PHASE", "This round cannot continue in its current phase.", false, 409);
+  }
+  if (status === "EXPIRED") {
+    return failure(requestId, "EXPIRED", "This room has expired.", false, 410);
+  }
+  return failure(requestId, "NOT_FOUND", "Room not found.", false, 404);
+}
+
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -298,7 +352,8 @@ Deno.serve(async (request) => {
     parsedRequest.data.action !== "join" &&
     parsedRequest.data.action !== "start" &&
     parsedRequest.data.action !== "snapshot" &&
-    parsedRequest.data.action !== "submit"
+    parsedRequest.data.action !== "submit" &&
+    parsedRequest.data.action !== "continue"
   ) {
     return failure(requestId, "INVALID_INPUT", "This game action is not implemented yet.", false, 400);
   }
@@ -407,6 +462,21 @@ Deno.serve(async (request) => {
       if (error) throw error;
       if (!data || data.status !== "SUBMITTED" || !data.submitted_room_id) {
         return submitFailure(requestId, data?.status ?? "NOT_FOUND");
+      }
+    }
+
+    if (parsedRequest.data.action === "continue") {
+      const { data, error } = await adminClient
+        .rpc("continue_round", {
+          p_profile_id: profile.id,
+          p_room_id: parsedRequest.data.roomId,
+          p_round_index: parsedRequest.data.roundIndex,
+        })
+        .single<ContinuedRoomRow>();
+
+      if (error) throw error;
+      if (!data || data.status !== "CONTINUED" || !data.continued_room_id) {
+        return continueFailure(requestId, data?.status ?? "NOT_FOUND");
       }
     }
 
