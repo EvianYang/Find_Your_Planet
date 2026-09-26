@@ -17,7 +17,7 @@
 
 ## 文件
 
-- `prompt.ts`：中文比较说明，三个维度、0–4/null 的含义、证据规则、只比较联想，不判定人格或谁更懂谁。题目/答案视为数据；解释避免 left/right 或 A/B 称呼以免交换署名后混乱。实际抗指令干扰效果仍需真实模型校准。
+- `prompt.ts`：英文比较说明（comparison-v2），三个维度、0–4/null 的含义、证据规则、只比较联想，不判定人格或谁更懂谁。题目/答案视为数据；解释避免 left/right 或 A/B 称呼以免交换署名后混乱。实际抗指令干扰效果仍需真实模型校准。
 - `evaluate-pair.ts`：输入检查、UTF-8 排序、有界调用、输出与证据校验、槽位映射。
 - `distance.ts`：仅实现本轮所需的 coverage/distance，不实现三轮汇总。权重0.25/0.5/0.25，覆盖不足0.5时返回null，否则按合同生成0–1000整数距离。
 - `tests/ai/evaluate-pair.test.ts`：六组自动测试，不调用网络。
@@ -44,3 +44,5 @@ EvaluationError.code 区分 INVALID_INPUT、INVALID_CONFIGURATION、TIMEOUT、PR
 
 `node --test tests/ai/evaluate-pair.test.ts` 六组通过；测试入口及其导入依赖通过严格 TypeScript 检查。
 覆盖槽位交换、UTF-8 与 UTF-16 排序差异、同文答案、额外输入拒绝、错误证据、未知距离、提供方失败无重试及超时取消。
+
+输出语言已由用户确认：所有模型指令和解读使用英文；evidence 不翻译，fmp-v1 不变。

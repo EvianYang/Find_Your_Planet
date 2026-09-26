@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { CURATED_PROMPTS } from "../content/prompts.ts";
 import { PromptSchema } from "../contracts/game.ts";
 import type { Prompt } from "../contracts/game.ts";
 import { GENERATION_INSTRUCTIONS, selectGenerationDirections, buildGenerationUserMessage } from "./generation-prompt.ts";
@@ -53,7 +54,8 @@ export async function generatePromptCandidates(
       if (!parsed.success) {
         return { status: "failed", candidates: [], reason: "invalid_output" };
       }
-      const seen = new Set<string>();
+      // Local post-generation deduplication only; never sent to the provider.
+      const seen = new Set(CURATED_PROMPTS.map((p) => p.text.normalize("NFKC").trim()));
       const candidates: Prompt[] = [];
       for (const question of parsed.data.questions) {
         if (controller.signal.aborted) return { status: "failed", candidates: [], reason: "timeout" };

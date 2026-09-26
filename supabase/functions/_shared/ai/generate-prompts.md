@@ -2,17 +2,17 @@
 
 版本：`question-generation-v2`
 
-规则来源：[START_AI.md 出题规则](../../../../docs/START_AI.md#出题规则)，已同步提交 `12ed8f8` 的“日常锚点＋反常转折”要求。
+规则来源：用户最新确认的开放想象标准，取代原“日常锚点＋反常转折”限制。参考 Book of Questions 与 r/WritingPrompts 的平实、开放风格，不复制原文或向模型提供示例题。
 
-本文件提供可直接使用的英文生成提示词，以及 C/B 的调用约定。3.2 独立于 3.1：生成时不读取、不传入人工题库，也不等待人工题库完成。生成后的题库去重、混池与抽题属于 3.3。
+本文件提供可直接使用的英文生成提示词，以及 C/B 的调用约定。3.2 独立于 3.1：模型请求不读取或传入人工题库；本地生成后使用已有题库去重。生成后先由本地代码对照已有题库去重；进一步质量筛选、混池与抽题属于 3.3。
 
 提示词、随机方向选择与有界生成流程已在代码中实现并通过单元测试；真实模型调用和房间接口仍待接入、验证。
 
 ## 生成目标
 
-在房间等待阶段，一次请求两道英文开放题。让玩家十秒内能凭直觉开始回答，通过人人熟悉的日常锚点加一个反常转折打开联想，不依赖特定职业或特定地点的经历。两题使用不同方向，并尽量采用不同句式、情绪和意象。
+在房间等待阶段，一次请求两道英文开放题。让玩家十秒内能凭直觉开始回答，题材允许古今中外、异能或世界规则变化；设定可以很大，问题落到“你”身上。历史只涉及常识，允许此刻状态作为钩子，避免刻意拟人、微小单位噱头和含糊设定。两题使用不同方向，并尽量采用不同句式、情绪和意象。
 
-每道题由一个短设定加一个问题组成，只问一件事；可以是两句，不再限制必须一句话。设定与问题合计尽量不超过 25 个英文单词，硬上限为 180 个 Unicode code points。题目应自然引出一个小故事或一个理由，而不只得到名词、数字或选项字母；同一题允许务实、好笑、感伤或哲学等不同回答方向。没有标准答案，不考专业知识，不要求长篇解释，也不预设玩家应该有什么感受。
+每道题由一个短设定加一个问题组成，只问一件事；可用“Would you? If so, where/who?”表达一个决定，不预设玩家接受设定中的提议。设定与问题合计尽量不超过 25 个英文单词，硬上限为 180 个 Unicode code points。题目应自然引出一个小故事或一个理由，而不只得到名词、数字或选项字母；同一题允许务实、好笑、感伤或哲学等不同回答方向。没有标准答案，不考专业知识，不要求长篇解释，也不预设玩家应该有什么感受。
 
 ## 调用前选择方向
 
@@ -27,11 +27,11 @@
 | Sensory Swap | Cross-sensory associations |
 | Invent It | Inventing or designing something unexpected |
 | You're Suddenly… | An unexpected change in your role or situation |
-| Mundane Magic | Everyday objects behaving in impossible ways |
+| One Message | A meaningful message across people, places, or eras |
 | Perspective Flip | Seeing yourself or something familiar from another perspective |
 | Absurd Debates | Playful disagreements without a factual right answer |
 | Fill the Story | Completing one concrete, unfinished story moment |
-| Tiny Rules | A small change to an everyday rule |
+| New Rules | A change to the rules of the world, grounded in your choice |
 | Hot Takes | An unusual opinion about something concrete |
 | Unspecified | Choose any imaginative direction; avoid repeating the other question's approach |
 
@@ -45,37 +45,30 @@
 Write two original, imaginative, open-ended questions in English, one for each supplied direction, in the supplied order.
 
 Question-writing rules:
-- Each item must contain one short setup followed by one question asking about just one thing. Two sentences are allowed; do not add a second task.
-- Aim for no more than 25 words across the setup and question together; never exceed 180 Unicode code points per item.
-- Combine a familiar everyday anchor with one unexpected twist that makes the familiar feel strange. Use broadly shared daily experiences rather than a specific location, profession, or specialist situation.
-- Give enough concrete constraints to help the reader begin, while leaving several genuinely different directions open.
-- Invite a small story or a reason, not merely a noun, number, yes/no, or option letter. The same question should allow practical, funny, emotional, or philosophical responses without requiring a particular tone.
-- Invite an imaginative leap rather than recall of a real event or fact.
-- Make it possible to begin answering intuitively within ten seconds, without specialist knowledge.
-- Keep the scale personal and immediately answerable, even if the premise changes reality.
-- Allow different answers without making disagreement inevitable; there is no correct or superior answer.
-- The tone may be absurd, tender, strange, funny, ordinary, or surprising. Vary the two questions in wording, mood, and imagery.
-- Treat each supplied direction as inspiration, not a rigid template. Do not include category labels in the questions.
-- For a choice-based question, make the alternatives vivid enough to inspire a meaningful answer; avoid bare yes/no or A/B choices.
-- Let the single question naturally invite a small story or reason; do not append a separate mandatory "why" question or demand a long explanation.
+- Let imagination range across places, eras, cultures, impossible abilities, and changes to the rules of the world. A premise may be enormous, but the decision or response must come down to you.
+- Use plain, conversational English, as if a friend casually asked an intriguing question. Favor an accessible hypothetical-question or short writing-prompt style, without copying published wording.
+- Use a short, clear setup and one central decision. Aim for 25 words or fewer overall; never exceed 180 Unicode code points per item.
+- Present-state hooks are welcome: the last song you listened to or what is within arm's reach right now. Do not require the model to know the reader's actual circumstances.
+- Historical premises must require only common knowledge, never specialist facts or historical analysis.
+- Allow an intuitive response within ten seconds, with room for different practical, funny, emotional, or philosophical answers.
+- Do not assume the reader accepts an offer or wants to use a power. When appropriate, ask "Would you? If so, where/who?" rather than assuming a choice with "Who do you pick?" These connected questions may express one decision.
+- Make choices concrete and meaningful; avoid vague premises or unexplained stakes.
+- Vary sentence structure, tone, and imagery across the pair. Directions are inspiration, not category labels to print.
 
 Avoid:
-- Knowledge quizzes, logic puzzles, essays, or predictions about institutions, civilizations, or historical consequences.
-- Long world-building followed by a second reasoning step.
-- Leading questions that assume the reader's feelings, values, or preferred answer.
-- Abstract concepts with no familiar everyday anchor and unexpected twist.
-- Unbounded choices supported only by phrases such as "any object", "anything", or "any one thing", with no other useful constraint.
-- Redundant scenery or multiple hooks that all funnel answers into the same narrow category.
-- Requests for real identifying information, contact details, credentials, or private personal history.
-- Repeated sentence templates, central objects, or emotional framing across the two questions.
+- Forced quirky personification, such as self-aware kitchen appliances or letters acting as roommates.
+- Requiring familiar everyday anchors or restricting imagination to daily life.
+- Exam-like questions asking the reader to deduce consequences for civilizations, institutions, or historical processes.
+- Trivial tiny-unit gimmicks, such as moving something two centimeters or changing something for one second.
+- Long world-building, knowledge quizzes, logic puzzles, essays, or obscure references.
+- Leading questions that prescribe feelings, values, or a preferred answer.
+- Requests for real identifying details, contact information, credentials, or sensitive private history.
 - The supplied overused imagery, including obvious inflections and close variants.
 
-Before responding, silently check both questions against these rules. Omit any question you cannot make suitable. Do not provide a replacement request, commentary, explanation, score, answer, or category field.
-
-Return only a JSON object in this exact shape:
+Silently check both questions. Omit any item you cannot make suitable. Do not supply answers, explanations, scores, categories, examples, or commentary.
+Return only JSON in this shape:
 {"questions":[{"text":"..."},{"text":"..."}]}
-
-The questions array may contain zero, one, or two items. Each item must contain only text. The object must contain only questions.
+The array may contain zero, one, or two items. Each item contains only text; the object contains only questions.
 ```
 
 ## User message 模板
@@ -100,8 +93,8 @@ moon, star, planet, galaxy, universe, space, orbit, silence, shadow, memory, dre
 - 文本进行 Unicode NFKC 规范化和首尾去空白，再按 Unicode code points 检查 1–180 字符；空题或超长题丢弃。
 - 规范化后检查本次两题是否重复，重复仅保留一题。不通过校验的题不补生成、不重试。
 - 25 个词是写作目标，不另设与合同冲突的硬长度上限。
-- 英文、短设定加单问题、日常锚点与反常转折、多方向回答空间、可独立理解和开放性属于质量检查；提示词要求不等于模型必然遵守。明显不合格的候选应丢弃，完整质量筛选在 3.3 接入。
-- 对照人工题库的去重属于生成后的 3.3；人工题库未就绪也不影响独立运行本步骤。
+- 英文、短设定加单问题、开放想象与个人决定、多方向回答空间、可独立理解和开放性属于质量检查；提示词要求不等于模型必然遵守。明显不合格的候选应丢弃，完整质量筛选在 3.3 接入。
+- 对照人工题库的去重在模型返回后由本地 seen 集合执行；题库内容不进入模型请求。
 - 合格候选由服务端补充稳定 ID、`source: "generated"`、`version: "question-generation-v2"`，形成已有 `Prompt` 结构。ID 在首次接受候选时生成，保存、刷新或重复读取时不重新生成。
 
 ## 一次有界调用
@@ -129,7 +122,7 @@ moon, star, planet, galaxy, universe, space, orbit, silence, shadow, memory, dre
 - [ ] 每次选择两个不同方向，最多一个为 Unspecified。
 - [ ] 请求仅包含出题规则、本次方向、默认避开词及输出格式。
 - [ ] 真实模型输出可解析，接受后的候选数量为 0–2。
-- [ ] 每题包含日常锚点与一个反常转折；短设定加问题只问一件事，不因两句表达而拒绝。
+- [ ] 设定可跨时代或改变世界规则，问题落到个人决定；短设定加问题只问一件事，不因两句表达而拒绝。
 - [ ] 同题可自然引出不同方向的小故事或理由，不局限于名词、数字或选项字母。
 - [ ] 排除无约束的无限选择、特定经历门槛、多余场景及把答案推向单一类别的钩子。
 - [ ] 空白、超长、额外字段、非法 JSON、超过两项和重复题有对应检查。

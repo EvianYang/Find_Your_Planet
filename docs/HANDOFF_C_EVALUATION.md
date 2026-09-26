@@ -65,3 +65,7 @@ C 已实现三个要求的 schema 及派生类型，另提供输入相关证据�
 ## 0.8 样例交付（2026-09-26）
 
 `src/fixtures/round-results.ts` 已提供近、中、远、线索不足、可重试技术失败五项手写演示数据。使用方式与状态表见 `src/fixtures/README.md`；未知为成功结果且 distance=null，技术失败为 data=null 的公共错误响应。三组 fixture 测试与类型检查通过；待 A 展示验收，不把样例视为真实模型结果。
+
+## 英文输出决定（2026-09-26）
+
+用户确认网站、模型指令、解读、fixture 与测试样例均用英文。comparison-v2 已同步 CONTRACTS，evidence 保留原文、fmp-v1 不变。A/B 交接通知见 HANDOFF_A_REVEAL.md；B 的未完成接线事项继续保留。

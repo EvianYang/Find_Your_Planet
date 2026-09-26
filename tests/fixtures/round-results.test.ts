@@ -8,7 +8,7 @@ test("all five demo scenarios use the shared response schema", () => {
   assert.deepEqual(ROUND_RESULT_FIXTURES.map((f) => f.scenario), ["close", "medium", "far", "insufficient", "technical-failure"]);
   for (const f of ROUND_RESULT_FIXTURES) {
     assert.equal(f.isDemo, true);
-    assert.match(f.label, /演示样例/);
+    assert.match(f.label, /Demo sample/);
     assert.ok(EvaluateResponseSchema.safeParse(f.response).success);
   }
 });
@@ -38,4 +38,12 @@ test("unknown is successful null distance; failure has no result or invented int
   assert.equal(technicalFailureRound.response.data, null);
   assert.equal(technicalFailureRound.response.error?.retryable, true);
   assert.equal(RoundResultSchema.safeParse(technicalFailureRound.response).success, false);
+});
+
+
+test("all demo prose and names are English", () => {
+  for (const fixture of ROUND_RESULT_FIXTURES) {
+    assert.doesNotMatch(JSON.stringify(fixture), /[\u4e00-\u9fff]/u);
+    assert.deepEqual(fixture.players.map((p) => p.nickname), ["Alex (demo)", "Sam (demo)"]);
+  }
 });
