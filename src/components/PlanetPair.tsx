@@ -29,6 +29,10 @@ export type PlanetPairProps = {
   /** Play the landing from the resting pose; false renders the settled state (refresh, skip, reduced motion). */
   play?: boolean;
   landDelayMs?: number;
+  /** Lobby: the second place can still be empty. Defaults to both present. */
+  present?: SlotFlags;
+  /** Overrides the default accessible description (for example for the overall result). */
+  ariaLabel?: string;
 };
 
 const NONE: SlotFlags = { a: false, b: false };
@@ -50,7 +54,8 @@ const STARS = (() => {
   }));
 })();
 
-function label(mode: PlanetPairMode, names: Record<Slot, string>, result?: PlanetPairProps["result"]): string {
+function label(mode: PlanetPairMode, names: Record<Slot, string>, result: PlanetPairProps["result"], present: SlotFlags): string {
+  if (!present.a || !present.b) return "One asteroid in the sky. The second place is still empty.";
   if (mode === "result" && result) {
     return result.distance === null
       ? "Two asteroids resting, not placed on the measuring line: this round has no distance."
@@ -69,6 +74,8 @@ export function PlanetPair({
   ready = NONE,
   play = false,
   landDelayMs = 0,
+  present = { a: true, b: true },
+  ariaLabel,
 }: PlanetPairProps) {
   const id = `fyp-pp${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
   const isResult = mode === "result" && result !== null;
@@ -79,6 +86,12 @@ export function PlanetPair({
   const e2 = target.b.x - CANVAS.radius;
   const mid = (e1 + e2) / 2;
   const y = CANVAS.measureY;
+
+  const emptyPlace = (key: "a" | "b") => (
+    <g transform={`translate(${REST_POSITION[key].x} ${REST_POSITION[key].y})`}>
+      <circle r={CANVAS.radius} fill="none" stroke="#f7f4ee" strokeOpacity="0.35" strokeWidth="1.2" strokeDasharray="3 5" filter={`url(#${id}-ink)`} />
+    </g>
+  );
 
   const asteroid = (slot: Slot) => {
     const key = slot === "A" ? "a" : "b";
@@ -118,7 +131,7 @@ export function PlanetPair({
       className={`fyp-pp fyp-pp--${mode}${playing ? " fyp-pp--play" : ""}`}
       style={{ "--fyp-land-delay": `${landDelayMs}ms` } as CSSProperties}
     >
-      <svg viewBox={`0 0 ${CANVAS.width} ${CANVAS.height}`} role="img" aria-label={label(mode, nicknames, result)}>
+      <svg viewBox={`0 0 ${CANVAS.width} ${CANVAS.height}`} role="img" aria-label={ariaLabel ?? label(mode, nicknames, result, present)}>
         <defs>
           <filter id={`${id}-ink`} x="-15%" y="-15%" width="130%" height="130%">
             <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves={1} seed={4} />
@@ -190,12 +203,12 @@ export function PlanetPair({
           </g>
         ) : null}
 
-        {asteroid("A")}
-        {asteroid("B")}
+        {present.a ? asteroid("A") : emptyPlace("a")}
+        {present.b ? asteroid("B") : emptyPlace("b")}
       </svg>
       <div className="pp-legend" aria-hidden="true">
-        <span className="pp-legend-a">{nicknames.A}</span>
-        <span className="pp-legend-b">{nicknames.B}</span>
+        <span className="pp-legend-a">{present.a ? nicknames.A : ""}</span>
+        <span className="pp-legend-b">{present.b ? nicknames.B : ""}</span>
       </div>
     </figure>
   );
