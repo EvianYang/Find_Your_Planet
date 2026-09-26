@@ -1,6 +1,6 @@
 # 3.4 单轮答案比较：审核与接线
 
-状态：通用比较流程已实现、单元测试通过；0.6 的服务商/模型尚未确认，真实模型适配器及真实请求验收待完成。没有用 fixture 冒充模型结果。
+状态：通用比较流程与 OpenAI 适配器已实现，gpt-5-mini 的两次真实请求通过结构与证据校验；输出稳定性与房间联调仍待验证。没有用 fixture 冒充模型结果。
 
 ## 新增行为
 
@@ -46,3 +46,15 @@ EvaluationError.code 区分 INVALID_INPUT、INVALID_CONFIGURATION、TIMEOUT、PR
 覆盖槽位交换、UTF-8 与 UTF-16 排序差异、同文答案、额外输入拒绝、错误证据、未知距离、提供方失败无重试及超时取消。
 
 输出语言已由用户确认：所有模型指令和解读使用英文；evidence 不翻译，fmp-v1 不变。
+
+## 3.4 真实请求验证（2026-09-26）
+
+已新增 `openai-provider.ts`，固定请求官方 Responses API，使用 strict JSON Schema、store=false、取消信号，无适配器内自动重试。配置通过调用者注入，不从前端读取；默认网络目标固定，防止本地配置意外把密钥发送至其他服务。
+
+本地验证入口：`node --env-file=supabase/functions/.env.local scripts/check-model.ts`。只发送脚本中的虚构英文答案，运行两次（正常顺序与交换槽位）；日志不输出密钥、答案或完整模型响应，仅记录模型、耗时、状态、距离和证据校验结果。普通测试不会调用网络。
+
+使用本地配置 gpt-5-mini 的成功记录：正常顺序 2588ms，交换后 3091ms；两次 status=ok、coverage=1、distance=0，全部证据属于正确答案，经过 ModelComparisonSchema 和 RoundResultSchema 验证。排序不变另有确定性单元测试覆盖。
+
+限制：此前一次真实尝试返回 INVALID_OUTPUT，被本地校验拒绝，未降级为 insufficient、未发布假结果。随后显式运行两次成功；这不是稳定性保证。错误字段诊断已加入验证脚本，仅打印路径和错误类别。3.9 仍需更广样例校准，3.10/B 调度仍需有限重试、租约与持久化接线。
+
+实现依据：[OpenAI Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs)、[GPT-5 mini](https://developers.openai.com/api/docs/models/gpt-5-mini)。未改评估 schema、权重或距离公式，未接入房间数据库。
