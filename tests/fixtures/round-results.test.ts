@@ -1,11 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { ROUND_RESULT_FIXTURES, insufficientRound, technicalFailureRound } from "../../src/fixtures/round-results.ts";
+import { ROUND_RESULT_FIXTURES, partialRound, insufficientRound, technicalFailureRound } from "../../src/fixtures/round-results.ts";
 import { EvaluateResponseSchema } from "../../supabase/functions/_shared/contracts/evaluate.ts";
 import { RoundResultSchema } from "../../supabase/functions/_shared/contracts/evaluation.ts";
 
-test("all five demo scenarios use the shared response schema", () => {
-  assert.deepEqual(ROUND_RESULT_FIXTURES.map((f) => f.scenario), ["close", "medium", "far", "insufficient", "technical-failure"]);
+test("all six demo scenarios use the shared response schema", () => {
+  assert.deepEqual(ROUND_RESULT_FIXTURES.map((f) => f.scenario), ["close", "medium", "far", "partial", "insufficient", "technical-failure"]);
   for (const f of ROUND_RESULT_FIXTURES) {
     assert.equal(f.isDemo, true);
     assert.match(f.label, /Demo sample/);
@@ -26,7 +26,7 @@ test("successful examples use correct scores and evidence belongs to its player"
       for (const quote of dim.bEvidence) assert.ok(fixture.answers.b.includes(quote), `${fixture.scenario}: B evidence`);
     }
   }
-  assert.deepEqual(distances, [0, 500, 1000, null]);
+  assert.deepEqual(distances, [0, 500, 1000, null, null]);
 });
 
 test("unknown is successful null distance; failure has no result or invented interpretation", () => {
@@ -46,4 +46,16 @@ test("all demo prose and names are English", () => {
     assert.doesNotMatch(JSON.stringify(fixture), /[\u4e00-\u9fff]/u);
     assert.deepEqual(fixture.players.map((p) => p.nickname), ["Alex (demo)", "Sam (demo)"]);
   }
+});
+
+
+test("partial interpretation is successful but below the distance coverage threshold", () => {
+  const data = partialRound.response.data;
+  assert.ok(data && data.status === "ready");
+  assert.equal(data.result.status, "ok");
+  assert.equal(data.result.coverage, 0.25);
+  assert.equal(data.result.distance, null);
+  assert.equal(data.result.dimensions.imagery.similarity, 4);
+  assert.equal(data.result.dimensions.association.similarity, null);
+  assert.equal(data.result.dimensions.orientation.similarity, null);
 });

@@ -7,7 +7,7 @@ import type { DimensionResult, RoundResult } from "../../supabase/functions/_sha
 const DemoRoundSchema = z.object({
   isDemo: z.literal(true),
   label: z.string(),
-  scenario: z.enum(["close", "medium", "far", "insufficient", "technical-failure"]),
+  scenario: z.enum(["close", "medium", "far", "partial", "insufficient", "technical-failure"]),
   prompt: PromptSchema,
   players: z.array(PlayerSchema).length(2),
   answers: z.object({ a: AnswerSchema, b: AnswerSchema }).strict(),
@@ -23,7 +23,7 @@ const players = [{ slot: "A", nickname: "Alex (demo)" }, { slot: "B", nickname: 
 const dimension = (similarity: DimensionResult["similarity"], a: string, b: string, explanation: string): DimensionResult => ({
   similarity, aEvidence: a ? [a] : [], bEvidence: b ? [b] : [], explanation,
 });
-const ready = (scenario: "close" | "medium" | "far" | "insufficient", label: string,
+const ready = (scenario: "close" | "medium" | "far" | "partial" | "insufficient", label: string,
   answers: { a: string; b: string }, result: Omit<RoundResult, "rubricVersion" | "modelId">,
 ): DemoRoundFixture => DemoRoundSchema.parse({
   isDemo: true, scenario, label: `Demo sample · ${label}`, prompt, players, answers,
@@ -73,6 +73,20 @@ export const farRound = ready("far", "Different paths · Far distance", {
   commonality: [], divergence: ["The objects, story paths, and expressed intentions differ."], unknowns: [],
 });
 
+export const partialRound = ready("partial", "Partial understanding, unknown distance", {
+  a: "The carrots.", b: "Carrots.",
+}, {
+  status: "ok", coverage: 0.25, distance: null,
+  dimensions: {
+    imagery: dimension(4, "carrots", "Carrots", "Both name carrots."),
+    association: dimension(null, "", "", "Neither answer develops an imaginative path."),
+    orientation: dimension(null, "", "", "Neither answer expresses a purpose or feeling."),
+  },
+  summary: "You share an image of carrots, but there is not enough context to estimate a distance.",
+  commonality: ["Both mention the same vegetable."], divergence: [],
+  unknowns: ["The imaginative paths and intentions are not expressed."],
+});
+
 export const insufficientRound = ready("insufficient", "Insufficient evidence", {
   a: "Not sure.", b: "Maybe.",
 }, {
@@ -95,4 +109,4 @@ export const technicalFailureRound = DemoRoundSchema.parse({
   },
 });
 
-export const ROUND_RESULT_FIXTURES = [closeRound, mediumRound, farRound, insufficientRound, technicalFailureRound] as const;
+export const ROUND_RESULT_FIXTURES = [closeRound, mediumRound, farRound, partialRound, insufficientRound, technicalFailureRound] as const;
