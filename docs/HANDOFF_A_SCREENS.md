@@ -1,6 +1,6 @@
 # A — 其余画面交接（1.1–1.4、1.8–1.10）
 
-状态：代码已交付、待联调。承接 `docs/HANDOFF_A_REVEAL.md`（揭晓页 1.5–1.7），不替代 Notion checklist 或 `CONTRACTS.md`；未通过真实接口验收前不勾选任务。所有画面文字为英文。
+状态：代码已交付、待联调（2026-09-26 已核对 backend `b0b7d85`）。承接 `docs/HANDOFF_A_REVEAL.md`（揭晓页 1.5–1.7），不替代 Notion checklist 或 `CONTRACTS.md`；未通过真实接口验收前不勾选任务。所有画面文字为英文。
 
 ## 团队已定
 
@@ -49,23 +49,46 @@
   - 1.9：服务端并列名次（1、1、3、4）；解读取第一个测出距离的轮次；分页后未知排在后面并显示 Unranked；同一伙伴多条；删除需确认；空记录和加载失败；
   - 375 与 320 宽度下六个画面都没有溢出，按钮不小于 44px，只有英文；全程无 React 报错。
 - 揭晓页回归测试 30 项通过（含 C 新增的部分可解释样例）。
+- 与 backend `b0b7d85` 对齐：main + backend + 本分支合并无冲突；B 的服务函数直接传入画面 props 通过类型检查（见下文接线写法）。
 - 未验证：真机、读屏软件实际朗读、真实剪贴板、与真实接口联调。
+
+## 已能接上的接口（backend `b0b7d85`）
+
+backend 已实现 identity `me` / `create`，game `create` / `join` / `start` / `snapshot` / `submit`。把 main、backend 与本分支合并后，用下面的写法把 B 的真实函数直接传进画面，`tsc -b` 通过，两边都不用改代码（这段只用于核对，没有提交到 `App.tsx`）：
+
+```tsx
+<WelcomeScreen profileNickname={null} onCreateIdentity={createIdentityProfile}
+  onCreateRoom={() => createRoom()} onJoinRoom={(code) => joinRoom(code)} />
+
+<LobbyScreen joinCode={/* 待 snapshot 提供 */ null} players={snap.players} viewerSlot={viewerSlot}
+  onStart={() => startGame(snap.roomId)} />
+
+<AnswerScreen roundIndex={snap.currentRound as 1 | 2 | 3} prompt={snap.currentPrompt} players={snap.players}
+  viewerSlot={viewerSlot} ownAnswer={snap.ownAnswer}
+  partnerSubmitted={viewerSlot === "A" ? snap.submitted.b : snap.submitted.a}
+  onSubmit={(text) => submitAnswer(snap.roomId, snap.currentRound as 1 | 2 | 3, text)} />
+```
+
+`viewerSlot` 和房间码目前 snapshot 里没有，见下表第 1、2 项。
 
 ## B 的请求与 Notion 任务对应
 
-`HANDOFF_A_REVEAL.md` 中的请求在 backend 分支上还没有落实。对应关系如下，做这些任务时请把两份交接文档一起当作验收输入（checklist 原文没有点名这些字段）：
+做这些任务时请把两份交接文档一起当作验收输入（checklist 原文没有点名这些字段）：
 
-| 请求 | 对应任务 |
-| --- | --- |
-| snapshot 加查看者槽位、房间码 | 2.5 |
-| 评估失败的剩余次数 / 已耗尽 / 失败后重试中，并放进 snapshot | 2.6 + 2.5 |
-| `useGameSession` 映射到各画面 props；`RevealScreen` 的 `animate` | 2.7 + 4.1 |
-| finished 阶段“我是否已保存” | 5.1–5.3 |
-| 房间码规则写进 CONTRACTS | 2.2（已实现，缺文档） |
-| identity/recover、rotate_recovery | 2.9 |
-| records/save、list、delete | 5.2–5.6 |
-| `main.tsx` 引入 `global.css`；`App.tsx` 加 `?preview=reveal` 与 `?preview=screens` | 不在任务里，4.1 之前顺手做 |
-| 是否自托管字体、favicon | 不在任务里 |
+| # | 请求 | 对应任务 | 状态（backend `b0b7d85`） |
+| --- | --- | --- | --- |
+| 1 | snapshot 加查看者槽位 | 2.5 | ❌ 2.5 已实现，但 `GameSnapshotSchema` 没有该字段；前端无法判断“我”是 A 还是 B |
+| 2 | snapshot 加房间码 | 2.5 | ❌ 同上；房主刷新后大厅无法显示房间码 |
+| 3 | 评估失败的剩余次数 / 已耗尽 / 失败后重试中，并放进 snapshot | 2.6 + 2.5 | 未开始（2.6） |
+| 4 | `useGameSession` 映射到各画面 props；`RevealScreen` 的 `animate` | 2.7 + 4.1 | 未开始 |
+| 5 | continue，推进下一轮 | 2.8 | 未开始 |
+| 6 | 揭晓结果（`revealedRounds` 目前恒为空） | 2.6 | 未开始 |
+| 7 | finished 阶段“我是否已保存” | 5.1–5.3 | 未开始 |
+| 8 | 房间码规则写进 CONTRACTS | 2.2 | 已实现（8 位），缺文档 |
+| 9 | identity/recover、rotate_recovery | 2.9 | 未开始 |
+| 10 | records/save、list、delete | 5.2–5.6 | 未开始 |
+| 11 | `main.tsx` 引入 `global.css`；`App.tsx` 加 `?preview=reveal` 与 `?preview=screens` | 不在任务里，4.1 之前顺手做 | 未做 |
+| 12 | 是否自托管字体、favicon | 不在任务里 | 未定 |
 
 ### 可直接发给 B 的 agent（接线部分）
 
@@ -77,4 +100,4 @@
 
 ## C 的请求
 
-`HANDOFF_A_REVEAL.md` 中给 C 的四项已在 C 分支完成（英文 fixture 与标签、部分可解释样例、两类未知判定、英文输出）。C 分支与 main 在 fixture 和交接文档上有冲突，需要 C 合并时处理。
+`HANDOFF_A_REVEAL.md` 中给 C 的四项已完成并合入 main（英文 fixture 与标签、部分可解释样例、两类未知判定、英文输出），本分支已同步。
