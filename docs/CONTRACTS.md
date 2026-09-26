@@ -1,4 +1,4 @@
-# Find my planet — CONTRACTS
+# Find Your Planet — CONTRACTS
 
 版本 fmp-v1 · 2026-09-25。此文件是待实现约定，不是已存在的 API。目录中的空模块仅用于分工定位，不代表接口已经实现。产品意图见 [PROJECT.md](PROJECT.md)，日常任务见 [Notion checklist](https://app.notion.com/p/3e7d830fac0481c8bf0ef203ac15c27e?pvs=204)。若实现需要改变行为，先同步负责人并更新本文件，不各自发明接口。
 

@@ -1,16 +1,16 @@
-# Find my planet
+# Find Your Planet
 
 **两颗星之间的距离，两颗心之间的距离。**
 
-状态：产品与开发规划、目录骨架已整理，应用尚未实现。版本：2026-09-25。日常进度由 [Notion：Find my planet — Development Checklist](https://app.notion.com/p/3e7d830fac0481c8bf0ef203ac15c27e?pvs=204)管理，不能把本文中的计划当成已完成的功能。
+状态：产品与开发规划、目录骨架已整理，应用尚未实现。版本：2026-09-25。日常进度由 [Notion：Find Your Planet — Development Checklist](https://app.notion.com/p/3e7d830fac0481c8bf0ef203ac15c27e?pvs=204)管理，不能把本文中的计划当成已完成的功能。
 
 ## 我们在做什么
 
 我们看到同一道问题，会想到相同的世界吗？
 
-Find my planet 是一个双人 AI 社交小游戏。两个人回答同样的开放问题，AI 比较答案中的联想，解释你们在哪里共鸣、在哪里走向不同，把这一局的“电波距离”变成两颗小行星之间的距离。
+Find Your Planet 是一个双人 AI 社交小游戏。两个人回答同样的开放问题，AI 比较答案中的联想，解释你们在哪里共鸣、在哪里走向不同，把这一局的“电波距离”变成两颗小行星之间的距离。
 
-它回应 “Fly Me to the Moon”：暂时离开眼前的现实，进入想象，也借此靠近另一个人的世界。“但愿人长久，千里共婵娟”是情感背景。名字使用 Find my planet，不再使用 Same Moon 作为现行产品名。
+它回应 “Fly Me to the Moon”：暂时离开眼前的现实，进入想象，也借此靠近另一个人的世界。“但愿人长久，千里共婵娟”是情感背景。名字使用 Find Your Planet，不再使用 Same Moon 作为现行产品名。
 
 适合朋友、伴侣、同学，也允许不熟悉的两个人一起玩。无需预先了解对方。体验应轻松、有趣、值得回看，不是心理测评，也不是回答质量比赛。
 
@@ -96,6 +96,6 @@ P0：双人房间、三轮问答、AI 比较、距离动画、总结、独立保
 
 - [CONTRACTS.md](CONTRACTS.md)：三条开发线必须一致的行为和接口。
 - [AGENTS.md](../AGENTS.md)：修改范围和交付规则。
-- [Notion：Find my planet — Development Checklist](https://app.notion.com/p/3e7d830fac0481c8bf0ef203ac15c27e?pvs=204)：任务与验收的唯一日常进度入口。
+- [Notion：Find Your Planet — Development Checklist](https://app.notion.com/p/3e7d830fac0481c8bf0ef203ac15c27e?pvs=204)：任务与验收的唯一日常进度入口。
 
 本文中的初始题目、数值阈值和视觉参数是开发基线，未宣称经过实测。现阶段只有目录与明确标记的代码占位，没有可运行应用、数据库、部署链接或已验证的功能。实际仓库目录保留团队已有的 Find_Your_Planet，不因产品名称重命名。

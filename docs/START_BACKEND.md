@@ -9,7 +9,7 @@
 
 ## 第一个交付：其他两人可以开工
 
-1. 在**当前仓库根目录**初始化 React + TypeScript + Vite，保留 README、文档与占位文件；不要再生成嵌套 find-my-planet 项目，也不要强制覆盖用户文件。
+1. 在**当前仓库根目录**初始化 React + TypeScript + Vite，保留 README、文档与占位文件；不要再生成嵌套 Find_Your_Planet 项目，也不要强制覆盖用户文件。
 2. 固定依赖并提交 lockfile；配置 dev、typecheck、build 命令。后端 Edge Functions 的 Deno 依赖单独处理，前端不导入服务端模块。
 3. 提供一个最小可运行页面和样例预览入口；与 A 约定 App.tsx 由你整合。
 4. 把游戏/身份/记录的共用定义放入 `_shared/contracts/game.ts`、`identity.ts`、`records.ts`；C 维护 evaluation.ts。使用 Zod 作为输入结构真相，不复制平行接口。

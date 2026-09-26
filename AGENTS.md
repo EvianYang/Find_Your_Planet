@@ -1,4 +1,4 @@
-# Find my planet — Agent rules
+# Find Your Planet — Agent rules
 
 本仓库已建立文档、目录与明确标记的源文件占位。当前没有可运行应用、依赖配置、数据库或部署；占位文件中的 export {} 不是功能实现。只有收到具体开发任务后才实现对应代码。
 
@@ -6,9 +6,9 @@
 
 1. [docs/PROJECT.md](docs/PROJECT.md)：产品目标与范围。
 2. [docs/CONTRACTS.md](docs/CONTRACTS.md)：接口、状态、AI、数据与权限。
-3. [Notion：Find my planet — Development Checklist](https://app.notion.com/p/3e7d830fac0481c8bf0ef203ac15c27e?pvs=204)中的当前任务、依赖、负责人和验收。
+3. [Notion：Find Your Planet — Development Checklist](https://app.notion.com/p/3e7d830fac0481c8bf0ef203ac15c27e?pvs=204)中的当前任务、依赖、负责人和验收。
 
-这是现有 GitHub 仓库 Find_Your_Planet，不要重命名仓库或工作目录。产品规划名称为 Find my planet；README 保留团队已有的英文介绍。本仓库不复制旧 Same Moon 归档。进度以 Notion 为准，不另建重复 ROADMAP。
+这是现有 GitHub 仓库 Find_Your_Planet，不要重命名仓库或工作目录。产品规划名称为 Find Your Planet；README 保留团队已有的英文介绍。本仓库不复制旧 Same Moon 归档。进度以 Notion 为准，不另建重复 ROADMAP。
 
 ## 个人 starting point
 
@@ -20,7 +20,7 @@ B 先建立开发运行环境和共用结构，再让 A 接样例、C 接真实�
 
 ## 不得改变的产品基线
 
-- 产品名称 Find my planet；已有仓库目录保留 Find_Your_Planet；slogan“两颗星之间的距离，两颗心之间的距离。”
+- 产品名称 Find Your Planet；已有仓库目录保留 Find_Your_Planet；slogan“两颗星之间的距离，两颗心之间的距离。”
 - 双人同题独立作答，三轮，每轮一个对称距离；不加入预测步骤或双向理解分。
 - 每局独立，允许不同题组，不锁定跨局个人答案。
 - 人工题库加少量 AI 新题后随机抽取；不限制题型，新题失败不阻塞开局。

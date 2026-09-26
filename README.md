@@ -1,4 +1,4 @@
-# Find_Your_Planet
+# Find Your Planet
 
 The distance between two stars. The distance between two hearts.
 
@@ -155,4 +155,4 @@ Find_Your_Planet/
 
 Empty backend/test directories contain `.gitkeep` so they are retained by Git. There are no deployable function entrypoints or migrations yet. Role guides link to the existing checklist task numbers; no tasks were automatically marked complete.
 
-The existing repository name `Find_Your_Planet` and English introduction are retained; the current product-planning name is **Find my planet**. Do not rename the remote or rewrite the introduction as part of scaffolding.
+The existing repository name `Find_Your_Planet` and English introduction are retained; the current product-planning name is **Find Your Planet**. Do not rename the remote or rewrite the introduction as part of scaffolding.
