@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { RoundResultSchema } from "./evaluation.ts";
 
 import {
   RequestIdSchema,
@@ -163,3 +164,7 @@ export type Prompt = z.infer<typeof PromptSchema>;
 export type EvaluationState = z.infer<typeof EvaluationStateSchema>;
 export type GameSnapshotBase = z.infer<typeof GameSnapshotBaseSchema>;
 export type GameRequest = z.infer<typeof GameRequestSchema>;
+
+// Final shared boundary: browser and server consume the same evaluated snapshot.
+export const GameSnapshotSchema = createGameSnapshotSchema(RoundResultSchema);
+export type GameSnapshot = z.infer<typeof GameSnapshotSchema>;

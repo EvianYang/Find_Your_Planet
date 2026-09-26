@@ -169,3 +169,15 @@ list 的有效记录按 overall_distance 升序；相同值并列名次（1,1,3�
 实现时检查类型、构建、关键事务/权限集成测试与上述 AI 样例；文档阶段不声称这些测试已运行。尤其检查揭晓前直接读取、同名身份、恢复后旧 JWT、旧评估租约、生成题迟到、双方独立收藏、跨题记录排序、房间清理后收藏保留。
 
 参考（用于技术行为核对，不是产品规则来源）：[Supabase 匿名登录](https://supabase.com/docs/guides/auth/auth-anonymous)、[行级权限](https://supabase.com/docs/guides/database/postgres/row-level-security)、[Edge Functions](https://supabase.com/docs/guides/functions)。匿名 JWT 与应用 profile 绑定、找回码机制属于本项目设计，并非 Supabase 内置昵称找回功能。
+
+## 0.7 代码交接（2026-09-26）
+
+当前 C 分支已合入 B 的 common/game/identity/records 定义，新增 evaluation.ts 与 evaluate.ts。前后端直接引用 `_shared/contracts/`，不复制结果类型；所有类型由 Zod 推导。
+
+- `evaluation.ts`：`ModelComparisonSchema`（模型 left/right 证据）、`DimensionResultSchema` / `RoundResultSchema`（玩家 A/B 证据）。严格拒绝额外字段，检查状态与证据数量、Unicode 长度、coverage 与 fmp-v1 distance 一致性。低覆盖距离必须为 null。
+- `createModelComparisonSchema(left, right)`：在规范化输入排序后调用，额外验证每条引用是对应原文的连续片段。结构校验本身不能证明解释的语义正确；语义校准仍属 3.6/3.9。
+- `game.ts` 已组合并导出 `GameSnapshotSchema` / `GameSnapshot`，沿用 B 的工厂，无第二份 RoundResult 定义。
+- `evaluate.ts`：公共请求仅接受 `{action:'run', roomId, roundIndex}`；内部 `ComparisonInputSchema` 只接受题目及 a/b 答案。响应 data 为 `{status:'ready',result}` 或 `{status:'processing'}`；技术失败使用公共 error 封装及 `EVALUATION_FAILED`，不得返回伪造 insufficient。
+- 测试入口：`node --test tests/contracts/evaluation.test.ts`（Node 25 的 TypeScript 支持）。六组测试覆盖非法输入、证据串人、Unicode 上限、未知距离、评分一致性、公共 snapshot 组合和收藏白名单。
+
+本次类型检查、构建和六组测试通过。业务 handler 的请求/响应 parse、权限与揭晓阶段保护、真实前后端联调仍需 B/A 接入验证；schema 存在不等于运行中所有外部输入已经过校验。0.7 状态为代码已交付、待联调，不代替团队勾选验收。
