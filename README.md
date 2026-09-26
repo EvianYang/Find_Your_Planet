@@ -156,6 +156,21 @@ same preview can call `identity/me` and create one profile through
 access is mediated by the authenticated function. Recovery codes are shown once
 and must not be copied into logs, screenshots, issues, or committed files.
 
+Task 2.1 has a remote acceptance check for two independent anonymous sessions
+using the same nickname. It also recreates one client from the same session
+storage, verifies the stable profile mapping, repeats `identity/create`
+idempotently, and confirms direct browser-equivalent reads are denied:
+
+```bash
+npm run verify:identity
+```
+
+This command uses `.env.local` and creates two test anonymous users and profiles
+in the linked Supabase project; they remain there until test-data cleanup is
+implemented. Generated test records use English-only labels. Its output never
+includes JWTs or recovery codes. Identity recovery and recovery-code rotation
+are task 2.9 and are intentionally not part of this check.
+
 Dependencies are pinned exactly in `package.json` and `package-lock.json`. Run these commands from the existing repository root; do not create a nested project.
 
 ```text

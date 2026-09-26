@@ -46,6 +46,7 @@ type VerificationState =
 function SupabasePreview() {
   const configured = isSupabaseConfigured();
   const [authVerified, setAuthVerified] = useState(false);
+  const [authUserId, setAuthUserId] = useState<string>();
   const [nickname, setNickname] = useState("");
   const [profile, setProfile] = useState<IdentityProfile | null>();
   const [recoveryCode, setRecoveryCode] = useState<string>();
@@ -65,8 +66,10 @@ function SupabasePreview() {
         status: "success",
         message: `匿名身份验证成功：${user.id.slice(0, 8)}…`,
       });
+      setAuthUserId(user.id);
       setAuthVerified(true);
     } catch (error) {
+      setAuthUserId(undefined);
       setAuthVerified(false);
       setVerification({
         status: "error",
@@ -143,8 +146,8 @@ function SupabasePreview() {
     <main>
       <h1>Supabase anonymous auth preview</h1>
       <p>
-        这个入口只验证真实 Supabase 匿名身份，不验证 profile 数据库或 AI
-        服务。
+        这个入口验证真实 Supabase 匿名身份、profile 映射和基础读取权限；不验证
+        AI 服务。
       </p>
       <p>
         前端公开配置：<strong>{configured ? "已读取" : "未配置"}</strong>
@@ -196,16 +199,26 @@ function SupabasePreview() {
         {verification.message}
       </p>
       {profile ? (
-        <p>
-          当前 profile：<strong>{profile.nickname}</strong>（版本 {profile.credentialVersion}）
-        </p>
+        <section>
+          <p>
+            当前 profile：<strong>{profile.nickname}</strong>（版本 {profile.credentialVersion}）
+          </p>
+          <p>
+            Auth user ID：<code>{authUserId}</code>
+            <br />
+            Profile ID：<code>{profile.id}</code>
+          </p>
+        </section>
       ) : null}
       {recoveryCode ? (
         <p>
           首次找回码：<code>{recoveryCode}</code>
         </p>
       ) : null}
-      <p>刷新页面后再次验证应得到相同身份；新的无痕窗口应得到不同身份。</p>
+      <p>
+        2.1 验收：刷新或重开后应得到相同的 Auth user ID 和 Profile
+        ID；在新的无痕窗口使用相同昵称，应得到不同的两个 ID。
+      </p>
       <a href="/">返回运行页</a>
     </main>
   );
