@@ -1,1 +1,41 @@
-/* SCAFFOLD ONLY — A：基础样式、响应式与减少动态效果。当前未接入应用。 */
+/* Global base styles (A). B imports this once from the app entry. */
+@import "./tokens.css";
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--fyp-bg);
+  color: var(--fyp-ink);
+  font-family: var(--fyp-font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--fyp-ink);
+  outline-offset: 3px;
+}
+
+.fyp-sr-only {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
