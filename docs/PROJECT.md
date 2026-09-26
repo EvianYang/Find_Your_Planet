@@ -1,6 +1,6 @@
 # Find Your Planet
 
-**两颗星之间的距离，两颗心之间的距离。**
+**The distance between two stars. The distance between two hearts.**
 
 状态：产品与开发规划、目录骨架已整理，应用尚未实现。版本：2026-09-25。日常进度由 [Notion：Find Your Planet — Development Checklist](https://app.notion.com/p/3e7d830fac0481c8bf0ef203ac15c27e?pvs=204)管理，不能把本文中的计划当成已完成的功能。
 
@@ -35,18 +35,18 @@ Find Your Planet 是一个双人 AI 社交小游戏。两个人回答同样的�
 
 首批人工题目草案（供 A/C 试玩后调整，不是题型限制）：
 
-1. 如果世界上可以多一种颜色，你希望它出现在什么地方？
-2. 你能让任何东西向左移动两厘米，每天一次。你准备先做什么？
-3. 一段沉默可以装进行李箱。你会把它带去哪里？
-4. 月亮突然显示“存储空间不足”。你觉得里面存了什么？
-5. 你家门外多出一条昨天不存在的路。它通向哪里？
-6. 如果能给宇宙补上一条说明书，你会写什么？
-7. 明天醒来，所有人的影子都可以请一天假。你的影子会去哪里？
-8. 你收到一张来自未来的收据，上面只有一件商品。是什么？
-9. 如果某一种声音可以长成植物，你想种什么？
-10. 世界忽然多出一个只属于你的节日。人们在那天会做什么？
-11. 你能把一扇窗开在任何东西上。你会开在哪里？
-12. 一只从未见过人类的小动物误把你当作一种天气。它会怎样描述你？
+1. If the world could have one more color, where would you want it to appear?
+2. Once a day, you can move anything two centimeters to the left. What would you move first?
+3. A moment of silence can fit inside a suitcase. Where would you take it?
+4. The Moon suddenly displays “Storage full.” What do you think is stored inside?
+5. A road that did not exist yesterday appears outside your home. Where does it lead?
+6. If you could add one instruction to the universe’s manual, what would it say?
+7. Tomorrow, everyone’s shadow can take the day off. Where would your shadow go?
+8. You receive a receipt from the future with only one item on it. What is it?
+9. If a sound could grow into a plant, which sound would you plant?
+10. The world suddenly gains a holiday that belongs only to you. What does everyone do that day?
+11. You can place a window on anything. Where would you put it?
+12. An animal that has never seen a human mistakes you for a kind of weather. How would it describe you?
 
 ## AI 为什么不可替代
 

@@ -12,6 +12,8 @@
 
 ## C 的首个交付
 
+Find Your Planet 是英文网站。C 产生的题目、summary、commonality、divergence、unknowns 和 explanation 等用户可见内容必须使用英文；接口报错也必须使用英文。内部文档和代码注释可继续使用中文。
+
 请按 `docs/START_AI.md` 与 `docs/CONTRACTS.md` 第 7 节完成：
 
 1. 在 `_shared/contracts/evaluation.ts` 实现严格 Zod schema，并从 schema 推导类型。

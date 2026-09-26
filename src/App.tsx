@@ -13,7 +13,7 @@ import { isSupabaseConfigured } from "./services/supabase-client.ts";
 
 const contractExample = {
   id: "curated-01",
-  text: "如果世界上可以多一种颜色，你希望它出现在什么地方？",
+  text: "If the world could have one more color, where would you want it to appear?",
   source: "curated",
   version: "fmp-v1",
 } as const;
@@ -24,15 +24,15 @@ function ContractPreview() {
   return (
     <main>
       <h1>Contracts preview</h1>
-      <p>这是 B 侧的本地结构校验入口，不代表后端或 AI 服务已连接。</p>
+      <p>This local preview validates B-owned data structures. It does not confirm a backend or AI connection.</p>
       <p>
-        Prompt fixture validation: <strong>{result.success ? "通过" : "失败"}</strong>
+        Prompt fixture validation: <strong>{result.success ? "Passed" : "Failed"}</strong>
       </p>
       <pre>{JSON.stringify(contractExample, null, 2)}</pre>
       <p>
-        C 的评估 fixture 将接入 <code>src/fixtures/round-results.ts</code>。
+        C&apos;s evaluation fixtures will be connected through <code>src/fixtures/round-results.ts</code>.
       </p>
-      <a href="/">返回运行页</a>
+      <a href="/">Back to the runtime page</a>
     </main>
   );
 }
@@ -53,18 +53,18 @@ function SupabasePreview() {
   const [verification, setVerification] = useState<VerificationState>({
     status: "idle",
     message: configured
-      ? "配置已读取，尚未发起真实匿名登录。"
-      : "缺少 .env.local 中的 Supabase 公开配置。",
+      ? "Configuration loaded. No live anonymous sign-in has been attempted yet."
+      : "Public Supabase configuration is missing from .env.local.",
   });
 
   async function verifyAnonymousSignIn() {
-    setVerification({ status: "running", message: "正在验证真实匿名登录…" });
+    setVerification({ status: "running", message: "Verifying live anonymous sign-in…" });
 
     try {
       const user = await ensureAnonymousUser();
       setVerification({
         status: "success",
-        message: `匿名身份验证成功：${user.id.slice(0, 8)}…`,
+        message: `Anonymous identity verified: ${user.id.slice(0, 8)}…`,
       });
       setAuthUserId(user.id);
       setAuthVerified(true);
@@ -73,13 +73,13 @@ function SupabasePreview() {
       setAuthVerified(false);
       setVerification({
         status: "error",
-        message: error instanceof Error ? error.message : "发生未知错误。",
+        message: error instanceof Error ? error.message : "An unknown error occurred.",
       });
     }
   }
 
   async function readProfile() {
-    setVerification({ status: "running", message: "正在调用 identity/me…" });
+    setVerification({ status: "running", message: "Calling identity/me…" });
 
     try {
       const currentProfile = await getIdentityProfile();
@@ -87,13 +87,13 @@ function SupabasePreview() {
       setVerification({
         status: "success",
         message: currentProfile
-          ? `profile 读取成功：${currentProfile.nickname}`
-          : "identity/me 调用成功，当前匿名身份尚未绑定 profile。",
+          ? `Profile loaded: ${currentProfile.nickname}`
+          : "identity/me succeeded. This anonymous identity does not have a profile yet.",
       });
     } catch (error) {
       setVerification({
         status: "error",
-        message: error instanceof Error ? error.message : "发生未知错误。",
+        message: error instanceof Error ? error.message : "An unknown error occurred.",
       });
     }
   }
@@ -101,7 +101,7 @@ function SupabasePreview() {
   async function createProfile() {
     setVerification({
       status: "running",
-      message: "正在通过 identity/create 创建 profile…",
+      message: "Creating a profile through identity/create…",
     });
 
     try {
@@ -111,13 +111,13 @@ function SupabasePreview() {
       setVerification({
         status: "success",
         message: identity.recoveryCode
-          ? "profile 创建成功。请立即复制下方首次找回码。"
-          : "该匿名身份已经绑定 profile；服务端未再次返回找回码。",
+          ? "Profile created. Copy the one-time recovery code below now."
+          : "This anonymous identity already has a profile. The server did not return the recovery code again.",
       });
     } catch (error) {
       setVerification({
         status: "error",
-        message: error instanceof Error ? error.message : "发生未知错误。",
+        message: error instanceof Error ? error.message : "An unknown error occurred.",
       });
     }
   }
@@ -125,19 +125,19 @@ function SupabasePreview() {
   async function verifyDirectReadDenied() {
     setVerification({
       status: "running",
-      message: "正在确认浏览器不能直接读取 profiles…",
+      message: "Confirming that the browser cannot read profiles directly…",
     });
 
     try {
       await verifyDirectProfileReadIsDenied();
       setVerification({
         status: "success",
-        message: "权限验证通过：浏览器直接读取 profiles 被拒绝。",
+        message: "Permission check passed: direct browser access to profiles was denied.",
       });
     } catch (error) {
       setVerification({
         status: "error",
-        message: error instanceof Error ? error.message : "发生未知错误。",
+        message: error instanceof Error ? error.message : "An unknown error occurred.",
       });
     }
   }
@@ -146,32 +146,32 @@ function SupabasePreview() {
     <main>
       <h1>Supabase anonymous auth preview</h1>
       <p>
-        这个入口验证真实 Supabase 匿名身份、profile 映射和基础读取权限；不验证
-        AI 服务。
+        This preview verifies a live Supabase anonymous identity, profile mapping,
+        and basic read permissions. It does not verify the AI service.
       </p>
       <p>
-        前端公开配置：<strong>{configured ? "已读取" : "未配置"}</strong>
+        Public frontend configuration: <strong>{configured ? "Loaded" : "Missing"}</strong>
       </p>
       <button
         type="button"
         disabled={!configured || verification.status === "running"}
         onClick={verifyAnonymousSignIn}
       >
-        {verification.status === "running" ? "验证中…" : "验证匿名登录"}
+        {verification.status === "running" ? "Verifying…" : "Verify anonymous sign-in"}
       </button>
       <button
         type="button"
         disabled={!authVerified || verification.status === "running"}
         onClick={readProfile}
       >
-        检查 identity/me
+        Check identity/me
       </button>
       <button
         type="button"
         disabled={!authVerified || verification.status === "running"}
         onClick={verifyDirectReadDenied}
       >
-        验证 profiles 直读被拒
+        Verify direct profile access is denied
       </button>
       {profile === null ? (
         <form
@@ -180,7 +180,7 @@ function SupabasePreview() {
             void createProfile();
           }}
         >
-          <label htmlFor="verification-nickname">昵称</label>{" "}
+          <label htmlFor="verification-nickname">Nickname</label>{" "}
           <input
             id="verification-nickname"
             value={nickname}
@@ -191,7 +191,7 @@ function SupabasePreview() {
             type="submit"
             disabled={!nickname.trim() || verification.status === "running"}
           >
-            创建 profile
+            Create profile
           </button>
         </form>
       ) : null}
@@ -201,25 +201,25 @@ function SupabasePreview() {
       {profile ? (
         <section>
           <p>
-            当前 profile：<strong>{profile.nickname}</strong>（版本 {profile.credentialVersion}）
+            Current profile: <strong>{profile.nickname}</strong> (version {profile.credentialVersion})
           </p>
           <p>
-            Auth user ID：<code>{authUserId}</code>
+            Auth user ID: <code>{authUserId}</code>
             <br />
-            Profile ID：<code>{profile.id}</code>
+            Profile ID: <code>{profile.id}</code>
           </p>
         </section>
       ) : null}
       {recoveryCode ? (
         <p>
-          首次找回码：<code>{recoveryCode}</code>
+          One-time recovery code: <code>{recoveryCode}</code>
         </p>
       ) : null}
       <p>
-        2.1 验收：刷新或重开后应得到相同的 Auth user ID 和 Profile
-        ID；在新的无痕窗口使用相同昵称，应得到不同的两个 ID。
+        Task 2.1 check: refreshing or reopening this browser should preserve both
+        IDs. The same nickname in a new private window should produce different IDs.
       </p>
-      <a href="/">返回运行页</a>
+      <a href="/">Back to the runtime page</a>
     </main>
   );
 }
@@ -238,14 +238,14 @@ export default function App() {
   return (
     <main>
       <h1>Find Your Planet</h1>
-      <p>两颗星之间的距离，两颗心之间的距离。</p>
-      <p>React、TypeScript 与 Vite 运行环境已接通。</p>
+      <p>The distance between two stars. The distance between two hearts.</p>
+      <p>The React, TypeScript, and Vite runtime is connected.</p>
       <ul>
         <li>
-          <a href="/?preview=contracts">打开 contracts 预览</a>
+          <a href="/?preview=contracts">Open the contracts preview</a>
         </li>
         <li>
-          <a href="/?preview=supabase">打开 Supabase 匿名身份预览</a>
+          <a href="/?preview=supabase">Open the Supabase identity preview</a>
         </li>
       </ul>
     </main>

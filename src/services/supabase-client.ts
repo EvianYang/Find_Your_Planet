@@ -19,8 +19,8 @@ export function getSupabaseClient(): SupabaseClient {
 
   if (!url || !publishableKey) {
     throw new Error(
-      "Supabase 尚未配置。请在 .env.local 中设置 " +
-        "VITE_SUPABASE_URL 和 VITE_SUPABASE_PUBLISHABLE_KEY。",
+      "Supabase is not configured. Set VITE_SUPABASE_URL and " +
+        "VITE_SUPABASE_PUBLISHABLE_KEY in .env.local.",
     );
   }
 

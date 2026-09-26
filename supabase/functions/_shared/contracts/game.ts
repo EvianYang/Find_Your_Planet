@@ -15,9 +15,9 @@ const trimmedUnicodeString = (label: string, maxLength: number) =>
     .pipe(
       z
         .string()
-        .min(1, `${label}不能为空`)
+        .min(1, `${label} cannot be empty.`)
         .refine((value) => unicodeLength(value) <= maxLength, {
-          message: `${label}不能超过 ${maxLength} 个 Unicode 字符`,
+          message: `${label} cannot exceed ${maxLength} Unicode characters.`,
         }),
     );
 
@@ -40,9 +40,9 @@ export const RoundIndexSchema = z.union([
   z.literal(2),
   z.literal(3),
 ]);
-export const NicknameSchema = trimmedUnicodeString("昵称", 20);
-export const AnswerSchema = trimmedUnicodeString("答案", 300);
-export const PromptTextSchema = trimmedUnicodeString("题目", 180);
+export const NicknameSchema = trimmedUnicodeString("Nickname", 20);
+export const AnswerSchema = trimmedUnicodeString("Answer", 300);
+export const PromptTextSchema = trimmedUnicodeString("Prompt", 180);
 
 export const PromptSchema = z
   .object({
