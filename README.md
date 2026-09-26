@@ -104,3 +104,55 @@ The moment we most want to create is:
 Or:
 
 **“So that’s what your world is like.”**
+
+
+---
+
+## Developer starting points / 开发入口
+
+The repository now contains documentation and tracked scaffold placeholders, **not a runnable application**. No dependencies, backend, database or deployment have been configured. Existing source placeholders export nothing and must be implemented before use.
+
+| Role | Start here | First handoff |
+|---|---|---|
+| A — Frontend & experience | [START_FRONTEND](docs/START_FRONTEND.md) | Fixture-driven reveal and planet distance UI |
+| B — Backend & integration | [START_BACKEND](docs/START_BACKEND.md) | Bootstrap Vite/React, shared contracts, then two-player room |
+| C — AI & questions | [START_AI](docs/START_AI.md) | Question bank, evaluation schema and validated fixtures |
+
+Read [AGENTS.md](AGENTS.md), [PROJECT.md](docs/PROJECT.md), and [CONTRACTS.md](docs/CONTRACTS.md) before coding. Track progress in the [Notion Development Checklist](https://app.notion.com/p/3e7d830fac0481c8bf0ef203ac15c27e?pvs=204).
+
+**Start order:** B establishes the runtime and shared contracts → C provides fixtures → A builds the reveal UI while B/C implement services → integrate one real round before expanding.
+
+**Current setup:** there is no package.json yet, so `npm install` / `npm run dev` are not available. B's first task is to configure these in this repository root without overwriting the existing files. Do not create a second nested application.
+
+```text
+Find_Your_Planet/
+├── AGENTS.md
+├── docs/                 PROJECT, CONTRACTS, three role guides
+├── src/
+│   ├── App.tsx           B: flow integration (placeholder)
+│   ├── main.tsx          B: startup (placeholder)
+│   ├── screens/          A: six screen placeholders
+│   ├── components/       A: four component placeholders
+│   ├── styles/           A: CSS placeholders
+│   ├── services/         B: client placeholders
+│   ├── hooks/            B: session placeholder
+│   └── fixtures/         C: sample-data placeholder
+├── supabase/
+│   ├── migrations/
+│   └── functions/
+│       ├── game/
+│       ├── evaluate/
+│       ├── records/
+│       ├── identity/
+│       └── _shared/
+│           ├── contracts/   B/C: client-safe definitions
+│           ├── ai/          C: server-only evaluation
+│           └── content/     C: question bank
+└── tests/
+    ├── ai/
+    └── integration/
+```
+
+Empty backend/test directories contain `.gitkeep` so they are retained by Git. There are no deployable function entrypoints or migrations yet. Role guides link to the existing checklist task numbers; no tasks were automatically marked complete.
+
+The existing repository name `Find_Your_Planet` and English introduction are retained; the current product-planning name is **Find my planet**. Do not rename the remote or rewrite the introduction as part of scaffolding.

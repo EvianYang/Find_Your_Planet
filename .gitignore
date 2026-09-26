@@ -1,0 +1,14 @@
+# Dependencies / build output
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+# Local credentials; example templates are safe to commit
+.env
+.env.*
+!.env.example
+supabase/.temp/
+supabase/.branches/
+# Local tools / OS
+.DS_Store
+*.log
