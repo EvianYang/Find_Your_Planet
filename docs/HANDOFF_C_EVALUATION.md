@@ -1,6 +1,6 @@
 # C — Evaluation 接口交接
 
-状态：B 侧工程与组合边界已建立，等待 C 实现评估 schema 和 fixture。本文是一次交接说明，不替代 Notion checklist 或 `CONTRACTS.md`。
+状态：评估 schema 已实现，game.ts 已组合 GameSnapshotSchema；fixture 与真实接口接线尚待完成。本文是一次交接说明，不替代 Notion checklist 或 `CONTRACTS.md`。
 
 ## 已由 B 固定
 
@@ -57,3 +57,11 @@ export type GameSnapshot = z.infer<typeof GameSnapshotSchema>;
 
 - Supabase、模型供应商与真实服务调用均未配置或验证。
 - `evaluate/run` 租约、重试、持久化和房间状态推进属于后续 B/C 联调，不在本次脚手架交付内。
+
+## 0.7 本次交付
+
+C 已实现三个要求的 schema 及派生类型，另提供输入相关证据校验、evaluate 请求/响应 schema；game.ts 已完成上文组合动作。详细导入入口、响应格式及验收证据见 CONTRACTS.md 的“0.7 代码交接”。本次不实现 0.8 fixture 或服务端模型调用。
+
+## 0.8 样例交付（2026-09-26）
+
+`src/fixtures/round-results.ts` 已提供近、中、远、线索不足、可重试技术失败五项手写演示数据。使用方式与状态表见 `src/fixtures/README.md`；未知为成功结果且 distance=null，技术失败为 data=null 的公共错误响应。三组 fixture 测试与类型检查通过；待 A 展示验收，不把样例视为真实模型结果。
