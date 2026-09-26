@@ -14,7 +14,7 @@ test("all five demo scenarios use the shared response schema", () => {
 });
 
 test("successful examples use correct scores and evidence belongs to its player", () => {
-  const distances = [];
+  const distances: (number | null)[] = [];
   for (const fixture of ROUND_RESULT_FIXTURES) {
     const data = fixture.response.data;
     if (!data || data.status !== "ready") continue;
