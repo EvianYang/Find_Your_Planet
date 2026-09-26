@@ -19,19 +19,19 @@ const prompt = PromptSchema.parse({
   id: "demo-fridge-notes", source: "curated", version: "demo-v1",
   text: "Your fridge starts leaving notes on your door; what does its first note say?",
 });
-const players = [{ slot: "A", nickname: "Alex" }, { slot: "B", nickname: "Sam" }];
+const players = [{ slot: "A", nickname: "Alex (demo)" }, { slot: "B", nickname: "Sam (demo)" }];
 const dimension = (similarity: DimensionResult["similarity"], a: string, b: string, explanation: string): DimensionResult => ({
   similarity, aEvidence: a ? [a] : [], bEvidence: b ? [b] : [], explanation,
 });
 const ready = (scenario: "close" | "medium" | "far" | "partial" | "insufficient", label: string,
   answers: { a: string; b: string }, result: Omit<RoundResult, "rubricVersion" | "modelId">,
 ): DemoRoundFixture => DemoRoundSchema.parse({
-  isDemo: true, scenario, label: `演示样例 · ${label}`, prompt, players, answers,
+  isDemo: true, scenario, label: `Demo sample · ${label}`, prompt, players, answers,
   response: { data: { status: "ready", result: { ...result, rubricVersion: "fmp-v1", modelId: "demo-handwritten-not-a-model" } },
     error: null, requestId: "91b264f0-6e12-4df4-9b2a-000000000101" },
 });
 
-export const closeRound = ready("close", "接近", {
+export const closeRound = ready("close", "Close", {
   a: "Eat the leftover soup first; I kept it safe for you.",
   b: "Please finish yesterday's soup; I have been guarding it for you.",
 }, {
@@ -45,7 +45,7 @@ export const closeRound = ready("close", "接近", {
   commonality: ["Shared soup imagery and a protective reminder."], divergence: ["The wording differs slightly, but the central idea is close."], unknowns: [],
 });
 
-export const mediumRound = ready("medium", "有差异 · 中距离", {
+export const mediumRound = ready("medium", "Different paths · Medium distance", {
   a: "Please eat the carrots before they go soft; I hate wasting food.",
   b: "The carrots are holding a concert tonight; bring cheese for the band.",
 }, {
@@ -59,7 +59,7 @@ export const mediumRound = ready("medium", "有差异 · 中距离", {
   commonality: ["Both build a fridge message around carrots."], divergence: ["Keeping food fresh and staging a concert take different imaginative paths."], unknowns: [],
 });
 
-export const farRound = ready("far", "有差异 · 远距离", {
+export const farRound = ready("far", "Different paths · Far distance", {
   a: "Pay me in magnets or I quit; cooling is a job, not a favor.",
   b: "I saved your birthday cake; everyone is waiting to celebrate with you.",
 }, {
@@ -73,13 +73,13 @@ export const farRound = ready("far", "有差异 · 远距离", {
   commonality: [], divergence: ["The objects, story paths, and expressed intentions differ."], unknowns: [],
 });
 
-export const partialRound = ready("partial", "部分可解释 · 距离未知", {
+export const partialRound = ready("partial", "Partial understanding, unknown distance", {
   a: "The carrots.", b: "Carrots.",
 }, {
   status: "ok", coverage: 0.25, distance: null,
   dimensions: {
     imagery: dimension(4, "carrots", "Carrots", "Both name carrots."),
-    association: dimension(null, "", "", "Neither answer explains how the idea unfolds."),
+    association: dimension(null, "", "", "Neither answer develops an imaginative path."),
     orientation: dimension(null, "", "", "Neither answer expresses a purpose or feeling."),
   },
   summary: "You share an image of carrots, but there is not enough context to estimate a distance.",
@@ -87,7 +87,7 @@ export const partialRound = ready("partial", "部分可解释 · 距离未知", 
   unknowns: ["The imaginative paths and intentions are not expressed."],
 });
 
-export const insufficientRound = ready("insufficient", "线索不足", {
+export const insufficientRound = ready("insufficient", "Insufficient evidence", {
   a: "Not sure.", b: "Maybe.",
 }, {
   status: "insufficient", coverage: 0, distance: null,
@@ -101,10 +101,10 @@ export const insufficientRound = ready("insufficient", "线索不足", {
 });
 
 export const technicalFailureRound = DemoRoundSchema.parse({
-  isDemo: true, scenario: "technical-failure", label: "演示样例 · 技术失败，可重试",
+  isDemo: true, scenario: "technical-failure", label: "Demo sample · Technical failure, retry available",
   prompt, players, answers: closeRound.answers,
   response: {
-    data: null, error: { code: "EVALUATION_FAILED", message: "分析暂时失败，请重试。", retryable: true },
+    data: null, error: { code: "EVALUATION_FAILED", message: "Analysis failed. Please try again.", retryable: true },
     requestId: "91b264f0-6e12-4df4-9b2a-000000000102",
   },
 });

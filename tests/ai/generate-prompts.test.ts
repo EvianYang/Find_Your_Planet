@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { readFileSync } from "node:fs";
+import { GENERATION_INSTRUCTIONS, GENERATION_USER_TEMPLATE, GENERATION_DIRECTIONS, selectGenerationDirections } from "../../supabase/functions/_shared/ai/generation-prompt.ts";
 import { CURATED_PROMPTS } from "../../supabase/functions/_shared/content/prompts.ts";
 import { generatePromptCandidates } from "../../supabase/functions/_shared/ai/generate-prompts.ts";
 
@@ -15,18 +17,29 @@ test("curated bank has 39 unique versioned UUID questions within limits", () => 
   }
 });
 
-test("request contains only instructions, curated text and cancellation signal", async () => {
+test("request sends English rules and two directions, never curated text or branding", async () => {
   const result = await generatePromptCandidates(async (request) => {
-    assert.deepEqual(Object.keys(request).sort(), ["curatedQuestions", "instructions", "signal"]);
-    assert.deepEqual(request.curatedQuestions, CURATED_PROMPTS.map((p) => p.text));
-    return { questions: [{ text: "如果云有口袋，里面会放什么？" }, { text: "一座桥做梦时会梦到什么？" }] };
+    assert.deepEqual(Object.keys(request).sort(), ["instructions", "signal", "user"]);
+    assert.match(request.instructions, /questions in English/);
+    assert.doesNotMatch(request.instructions + request.user, /Find Your Planet|Two stars/);
+    for (const p of CURATED_PROMPTS) assert.ok(!(request.instructions + request.user).includes(p.text));
+    const lines = request.user.split("\n");
+    assert.ok(lines[0].startsWith("Direction 1: "));
+    assert.ok(lines[1].startsWith("Direction 2: "));
+    assert.notEqual(lines[0].slice(13), lines[1].slice(13));
+    assert.match(request.user, /Avoid this overused imagery:/);
+    return { questions: [{ text: "You can travel through time once. Would you go, and to which year?" }, { text: "You gain an ability based on your last meal. What can you do?" }] };
   });
   assert.equal(result.status, "ready");
   assert.equal(result.candidates.length, 2);
   assert.notEqual(result.candidates[0].id, result.candidates[1].id);
+  for (const candidate of result.candidates) {
+    assert.equal(candidate.version, "question-generation-v2");
+    assert.doesNotMatch(candidate.text, /\b(moon|star|planet|galaxy|universe|space|orbit|silence|shadow|memory|dream|window|ocean)s?\b/i);
+  }
 });
 
-test("normalizes text and removes duplicate candidates and bank repeats", async () => {
+test("normalizes batch duplicates and removes curated repeats after generation", async () => {
   const duplicate = await generatePromptCandidates(async () => ({
     questions: [{ text: "  Ａ cloud? " }, { text: "A cloud?" }],
   }));
@@ -35,21 +48,21 @@ test("normalizes text and removes duplicate candidates and bank repeats", async 
     questions: [{ text: ` ${CURATED_PROMPTS[0].text} ` }],
   }));
   assert.equal(existing.status, "empty");
+  assert.deepEqual(existing.candidates, []);
 });
 
 test("rejects malformed output and accepts an empty candidate list", async () => {
-  for (const raw of [null, {}, { questions: [{ text: " " }] },
-    { questions: [{ text: "字".repeat(181) }] },
-    { questions: [{ text: "题目", extra: true }] },
+  for (const raw of [null, {}, { questions: [{ text: 123 }] },
+    { questions: [{ text: "Question", extra: true }] },
     { questions: [], extra: true },
-    { questions: Array.from({ length: 3 }, () => ({ text: "题目" })) },
+    { questions: Array.from({ length: 3 }, () => ({ text: "Question" })) },
   ]) {
     const result = await generatePromptCandidates(async () => raw);
     assert.equal(result.reason, "invalid_output");
     assert.deepEqual(result.candidates, []);
   }
   assert.equal((await generatePromptCandidates(async () => ({ questions: [] }))).status, "empty");
-  const unicode = await generatePromptCandidates(async () => ({ questions: [{ text: "🌙".repeat(180) }] }));
+  const unicode = await generatePromptCandidates(async () => ({ questions: [{ text: "🧩".repeat(180) }] }));
   assert.equal(unicode.status, "ready");
 });
 
@@ -78,7 +91,37 @@ test("eight-second deadline returns even when provider ignores cancellation", as
   assert.equal(signal?.aborted, true);
   assert.equal(calls, 1);
   assert.deepEqual(result, { status: "failed", candidates: [], reason: "timeout" });
-  finish?.({ questions: [{ text: "迟到的月光住在哪里？" }] });
+  finish?.({ questions: [{ text: "You receive a letter from the future. Would you reply?" }] });
   await Promise.resolve();
   assert.deepEqual(result.candidates, []);
+});
+
+
+test("invalid lengths are discarded individually without losing a valid sibling", async () => {
+  for (const text of ["   ", "a".repeat(181)]) {
+    const result = await generatePromptCandidates(async () => ({ questions: [{ text }, { text: "You can travel through time once. Would you go, and to which year?" }] }));
+    assert.equal(result.status, "ready");
+    assert.equal(result.candidates.length, 1);
+  }
+  const result = await generatePromptCandidates(async () => ({ questions: [{ text: " " }] }));
+  assert.equal(result.status, "empty");
+});
+
+test("direction selection covers distinct pairs, including at most one unspecified", () => {
+  assert.equal(GENERATION_DIRECTIONS.length, 14);
+  for (let i = 0; i < 14; i++) {
+    for (let j = 0; j < 13; j++) {
+      const values = [(i + 0.5) / 14, (j + 0.5) / 13];
+      const pair = selectGenerationDirections(() => values.shift()!);
+      assert.notEqual(pair[0], pair[1]);
+      assert.ok(pair.filter((d) => d.startsWith("Unspecified:")).length <= 1);
+    }
+  }
+});
+
+test("runtime instructions exactly match the reviewed Markdown", () => {
+  const md = readFileSync(new URL("../../supabase/functions/_shared/ai/generate-prompts.md", import.meta.url), "utf8");
+  const blocks = [...md.matchAll(/```text\n([\s\S]*?)\n```/g)].map((m) => m[1]);
+  assert.equal(GENERATION_INSTRUCTIONS, blocks[0]);
+  assert.equal(GENERATION_USER_TEMPLATE, blocks[1]);
 });

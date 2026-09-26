@@ -30,9 +30,9 @@
 - 未验证：真机、读屏软件实际朗读、与真实 snapshot 联调。
 - 预览入口没有提交：`App.tsx` 归 B，下文请 B 接入。
 
-## 需要团队决定
+## 已确认的团队决定
 
-**模型解读的输出语言。** 题库与界面是英文，但 `CONTRACTS.md` §7（“输出严格结构化中文”）和 `_shared/ai/prompt.ts`（“解释用简短中文”）要求中文。如果改为英文，需要 C 更新提示词与 fixture，并同步 CONTRACTS。在此之前，界面会出现英文题目配中文解读。
+**模型解读使用英文。** C 已同步 `CONTRACTS.md`、比较提示词、fixture 与测试；evidence 仍逐字引用原答案。A 需按英文内容验收排版，B 需继续接线英文错误文案与模型配置。
 
 ## 给 B 的请求
 
@@ -77,3 +77,7 @@
 > 2. 把现有样例的 summary、commonality、divergence、unknowns、explanation 改成简短英文，保持原有含义、证据逐字属于正确答案；昵称去掉“（演示）”，演示身份只放在 label。
 > 3. 在 README 说明两类未知分别是 `status = insufficient` 与 `status = ok 且 coverage < 0.5`。
 > 如团队已决定解读输出改为英文，再另开任务同步 `prompt.ts` 与 CONTRACTS §7，本次不改。完成后运行 fixture 测试与 typecheck，说明改动和验证结果，不调用真实模型。
+
+## A/B 合同变更通知（用户已确认，2026-09-26）
+
+网站与发给模型的文字统一为英文。C 已将比较指令升级至 comparison-v3，summary/explanation/commonality/divergence/unknowns 输出英文，evidence 仍逐字引用原答案；fmp-v1、schema 和距离算法不变。生成使用 question-generation-v2 的更新规则，不再要求日常锚点；题库只用于生成后的本地去重。请 A 验收英文排版、B 接线英文错误文案与提供方配置。本通知保留以上尚未完成的 B 请求，不代表其已完成。
