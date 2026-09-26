@@ -144,6 +144,18 @@ npm run preview
 
 The default page is the minimal runtime smoke test. Open `/?preview=contracts` for the B-owned local contract preview. This preview validates static local data only; it does not claim that Supabase or AI is connected.
 
+To verify a real Supabase anonymous session, copy `.env.example` to
+`.env.local`, fill in the project URL and publishable key, restart the dev
+server, and open `/?preview=supabase`. The verification is user-triggered and
+only displays a shortened user ID; it never prints session tokens. A successful
+anonymous sign-in does not by itself verify database RLS or controlled writes.
+
+After the `profiles` migration and `identity` Edge Function are deployed, the
+same preview can call `identity/me` and create one profile through
+`identity/create`. The browser has no direct grants on `public.profiles`; all
+access is mediated by the authenticated function. Recovery codes are shown once
+and must not be copied into logs, screenshots, issues, or committed files.
+
 Dependencies are pinned exactly in `package.json` and `package-lock.json`. Run these commands from the existing repository root; do not create a nested project.
 
 ```text
