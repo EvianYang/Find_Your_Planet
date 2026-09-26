@@ -110,7 +110,10 @@ Or:
 
 ## Developer starting points / 开发入口
 
-The repository contains a minimal runnable React/TypeScript/Vite shell and shared B-owned contracts. The gameplay backend, database, AI evaluation, deployment, and product UI are not implemented yet.
+The repository contains a runnable React/TypeScript/Vite shell, shared contracts,
+anonymous identity, and the task 2.2 room create/join backend. Starting games,
+answer submission, AI evaluation, records, and the product UI are not implemented
+yet.
 
 | Role | Start here | First handoff |
 |---|---|---|
@@ -171,6 +174,23 @@ implemented. Generated test records use English-only labels. Its output never
 includes JWTs or recovery codes. Identity recovery and recovery-code rotation
 are task 2.9 and are intentionally not part of this check.
 
+Task 2.2 adds transactional room creation and joining. The host always occupies
+slot A; a row lock plus database uniqueness constraints allow exactly one slot B
+even when two players join concurrently. Creation is idempotent for the same
+profile and request ID, and an existing member can safely repeat `join`.
+
+After deploying migration `202609260002_create_rooms.sql` and the `game` Edge
+Function, run the real concurrency check with:
+
+```bash
+npm run verify:rooms
+```
+
+This check creates one test room and three English-labeled test profiles in the
+linked Supabase project. It verifies idempotent creation, case-insensitive invite
+codes, one successful concurrent join, one `ROOM_FULL` response, idempotent
+rejoin, and denied direct browser reads of `participants`.
+
 Dependencies are pinned exactly in `package.json` and `package-lock.json`. Run these commands from the existing repository root; do not create a nested project.
 
 ```text
@@ -202,6 +222,10 @@ Find_Your_Planet/
     └── integration/
 ```
 
-Empty backend/test directories contain `.gitkeep` so they are retained by Git. There are no deployable function entrypoints or migrations yet. C's evaluation handoff is documented in [HANDOFF_C_EVALUATION](docs/HANDOFF_C_EVALUATION.md). Role guides link to the existing checklist task numbers; no tasks were automatically marked complete.
+Unimplemented backend/test directories retain `.gitkeep` placeholders. The
+implemented `identity` and `game` functions and their migrations are deployable;
+other placeholder modules are not. C's evaluation handoff is documented in
+[HANDOFF_C_EVALUATION](docs/HANDOFF_C_EVALUATION.md). Role guides link to the
+existing checklist task numbers; no tasks are automatically marked complete.
 
 The existing repository name `Find_Your_Planet` and English introduction are retained; the current product-planning name is **Find Your Planet**. Do not rename the remote or rewrite the introduction as part of scaffolding.

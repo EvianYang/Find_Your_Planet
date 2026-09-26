@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import {
+  createApiResponseSchema,
   RequestIdSchema,
   UtcDateTimeSchema,
   UuidSchema,
@@ -155,6 +156,14 @@ export const RoomCreatedSchema = z
   .object({ roomId: UuidSchema, joinCode: z.string().min(1).max(32) })
   .strict();
 
+export const RoomJoinedSchema = z.object({ roomId: UuidSchema }).strict();
+export const RoomCreatedResponseSchema = createApiResponseSchema(
+  RoomCreatedSchema,
+);
+export const RoomJoinedResponseSchema = createApiResponseSchema(
+  RoomJoinedSchema,
+);
+
 export type Slot = z.infer<typeof SlotSchema>;
 export type Phase = z.infer<typeof PhaseSchema>;
 export type CurrentRound = z.infer<typeof CurrentRoundSchema>;
@@ -163,3 +172,5 @@ export type Prompt = z.infer<typeof PromptSchema>;
 export type EvaluationState = z.infer<typeof EvaluationStateSchema>;
 export type GameSnapshotBase = z.infer<typeof GameSnapshotBaseSchema>;
 export type GameRequest = z.infer<typeof GameRequestSchema>;
+export type RoomCreated = z.infer<typeof RoomCreatedSchema>;
+export type RoomJoined = z.infer<typeof RoomJoinedSchema>;
