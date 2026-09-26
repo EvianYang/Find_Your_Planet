@@ -20,7 +20,7 @@
 验证：`node --test tests/fixtures/round-results.test.ts`，五组测试通过，覆盖共用结构、评分一致性、证据逐字归属、未知与技术失败区别；项目类型检查通过。A 仍需实际打开界面核对六种状态后确认 0.8 展示验收。
 
 
-A 揭晓交接补充：所有样例解读现为英文，昵称为 Alex / Sam；演示标识仍由外层 label 和 isDemo 保留。真实模型输出语言尚未改动，仍以 CONTRACTS 为准。
+A 揭晓交接补充：所有样例解读现为英文，昵称为 Alex (demo) / Sam (demo)；演示标识也由外层 label 和 isDemo 保留。模型输出语言已统一为英文，详见 CONTRACTS 与 comparison-v3；evidence 仍逐字保留原答案。
 
 两类未知都没有量化距离，但含义不同：
 - `status === "insufficient"`：全部维度无从判断，本样例 coverage=0。
