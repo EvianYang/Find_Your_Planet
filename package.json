@@ -12,7 +12,9 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "verify:identity": "node --env-file=.env.local --test tests/integration/identity.remote.test.mjs",
-    "verify:rooms": "node --env-file=.env.local --test tests/integration/rooms.remote.test.mjs"
+    "verify:rooms": "node --env-file=.env.local --test tests/integration/rooms.remote.test.mjs",
+    "verify:start": "node --env-file=.env.local --test tests/integration/start-game.remote.test.mjs",
+    "verify:submit": "node --env-file=.env.local --test tests/integration/submit-protection.remote.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.117.2",

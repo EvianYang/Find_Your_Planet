@@ -176,6 +176,9 @@ export type GameRequest = z.infer<typeof GameRequestSchema>;
 
 // Final shared boundary: browser and server consume the same evaluated snapshot.
 export const GameSnapshotSchema = createGameSnapshotSchema(RoundResultSchema);
+export const GameSnapshotResponseSchema = createApiResponseSchema(
+  GameSnapshotSchema,
+);
 export type GameSnapshot = z.infer<typeof GameSnapshotSchema>;
 export type RoomCreated = z.infer<typeof RoomCreatedSchema>;
 export type RoomJoined = z.infer<typeof RoomJoinedSchema>;

@@ -1,11 +1,17 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { corsHeaders } from "@supabase/supabase-js/cors";
 
 import {
   type ApiErrorCode,
   RequestIdSchema,
 } from "../_shared/contracts/common.ts";
-import { GameRequestSchema } from "../_shared/contracts/game.ts";
+import {
+  GameRequestSchema,
+  GameSnapshotSchema,
+  PromptSchema,
+  type Prompt,
+} from "../_shared/contracts/game.ts";
+import { CURATED_PROMPTS } from "../_shared/content/prompts.ts";
 
 type JsonRecord = Record<string, unknown>;
 type ProfileRow = { id: string };
@@ -15,6 +21,28 @@ type JoinedRoomRow = {
   room_id: string | null;
   slot: string | null;
 };
+type StartedRoomRow = { status: string; started_room_id: string | null };
+type RoomRow = {
+  id: string;
+  phase: string;
+  current_round: number;
+  revision: number;
+  expires_at: string;
+};
+type ParticipantRow = {
+  profile_id: string;
+  slot: "A" | "B";
+  nickname_snapshot: string;
+};
+type RoundRow = {
+  id: string;
+  prompt_json: unknown;
+  evaluation_state: string;
+  continued_a: boolean;
+  continued_b: boolean;
+};
+type SubmissionRow = { profile_id: string; body: string };
+type SubmittedRoomRow = { status: string; submitted_room_id: string | null };
 
 const responseHeaders = {
   ...corsHeaders,
@@ -84,6 +112,110 @@ function generateJoinCode(): string {
   ).join("");
 }
 
+function selectThreePrompts(): Prompt[] {
+  const available = [...CURATED_PROMPTS];
+  const selected: Prompt[] = [];
+
+  while (selected.length < 3) {
+    const random = crypto.getRandomValues(new Uint32Array(1))[0];
+    const index = random % available.length;
+    selected.push(PromptSchema.parse(available.splice(index, 1)[0]));
+  }
+
+  return selected;
+}
+
+async function loadSnapshot(
+  adminClient: SupabaseClient,
+  profileId: string,
+  roomId: string,
+): Promise<
+  | { ok: true; snapshot: ReturnType<typeof GameSnapshotSchema.parse> }
+  | { ok: false; code: "NOT_FOUND" | "EXPIRED" }
+> {
+  const { data: room, error: roomError } = await adminClient
+    .from("rooms")
+    .select("id,phase,current_round,revision,expires_at")
+    .eq("id", roomId)
+    .maybeSingle<RoomRow>();
+
+  if (roomError) throw roomError;
+  if (!room) return { ok: false, code: "NOT_FOUND" };
+
+  const { data: participants, error: participantsError } = await adminClient
+    .from("participants")
+    .select("profile_id,slot,nickname_snapshot")
+    .eq("room_id", roomId)
+    .order("slot")
+    .returns<ParticipantRow[]>();
+
+  if (participantsError) throw participantsError;
+  if (!participants?.some((participant) => participant.profile_id === profileId)) {
+    return { ok: false, code: "NOT_FOUND" };
+  }
+  if (new Date(room.expires_at).getTime() <= Date.now()) {
+    return { ok: false, code: "EXPIRED" };
+  }
+
+  let round: RoundRow | null = null;
+  if (room.current_round > 0) {
+    const { data, error } = await adminClient
+      .from("rounds")
+      .select("id,prompt_json,evaluation_state,continued_a,continued_b")
+      .eq("room_id", roomId)
+      .eq("round_index", room.current_round)
+      .maybeSingle<RoundRow>();
+    if (error) throw error;
+    if (!data) throw new Error("The current round is missing.");
+    round = data;
+  }
+
+  let submissions: SubmissionRow[] = [];
+  if (round) {
+    const { data, error } = await adminClient
+      .from("submissions")
+      .select("profile_id,body")
+      .eq("round_id", round.id)
+      .returns<SubmissionRow[]>();
+    if (error) throw error;
+    submissions = data ?? [];
+  }
+
+  const profileBySlot = new Map(
+    participants.map((participant) => [participant.slot, participant.profile_id]),
+  );
+  const ownSubmission = submissions.find(
+    (submission) => submission.profile_id === profileId,
+  );
+
+  const snapshot = GameSnapshotSchema.parse({
+    roomId: room.id,
+    phase: room.phase,
+    currentRound: room.current_round,
+    revision: room.revision,
+    expiresAt: room.expires_at,
+    players: participants.map((participant) => ({
+      slot: participant.slot,
+      nickname: participant.nickname_snapshot,
+    })),
+    currentPrompt: round?.prompt_json ?? null,
+    ownAnswer: ownSubmission?.body ?? null,
+    submitted: {
+      a: submissions.some((submission) => submission.profile_id === profileBySlot.get("A")),
+      b: submissions.some((submission) => submission.profile_id === profileBySlot.get("B")),
+    },
+    continued: {
+      a: round?.continued_a ?? false,
+      b: round?.continued_b ?? false,
+    },
+    evaluationState: round?.evaluation_state ?? "idle",
+    revealedRounds: [],
+    overall: null,
+  });
+
+  return { ok: true, snapshot };
+}
+
 function joinFailure(requestId: string, status: string): Response {
   if (status === "ROOM_FULL") {
     return failure(requestId, "ROOM_FULL", "This room already has two players.", false, 409);
@@ -93,6 +225,47 @@ function joinFailure(requestId: string, status: string): Response {
   }
   if (status === "INVALID_PHASE") {
     return failure(requestId, "INVALID_PHASE", "This room can no longer be joined.", false, 409);
+  }
+  return failure(requestId, "NOT_FOUND", "Room not found.", false, 404);
+}
+
+function snapshotFailure(
+  requestId: string,
+  code: "NOT_FOUND" | "EXPIRED",
+): Response {
+  return code === "EXPIRED"
+    ? failure(requestId, "EXPIRED", "This room has expired.", false, 410)
+    : failure(requestId, "NOT_FOUND", "Room not found.", false, 404);
+}
+
+function startFailure(requestId: string, status: string): Response {
+  if (status === "UNAUTHORIZED") {
+    return failure(requestId, "UNAUTHORIZED", "Only the host can start this game.", false, 403);
+  }
+  if (status === "NOT_READY") {
+    return failure(requestId, "CONFLICT", "Both players must join before the host can start.", false, 409);
+  }
+  if (status === "EXPIRED") {
+    return failure(requestId, "EXPIRED", "This room has expired.", false, 410);
+  }
+  if (status === "INVALID_PHASE") {
+    return failure(requestId, "INVALID_PHASE", "This room cannot be started in its current phase.", false, 409);
+  }
+  if (status === "INVALID_PROMPTS") {
+    return failure(requestId, "INTERNAL_ERROR", "The question pool is temporarily unavailable.", true, 500);
+  }
+  return failure(requestId, "NOT_FOUND", "Room not found.", false, 404);
+}
+
+function submitFailure(requestId: string, status: string): Response {
+  if (status === "CONFLICT") {
+    return failure(requestId, "CONFLICT", "This round already has a different answer from you.", false, 409);
+  }
+  if (status === "INVALID_PHASE") {
+    return failure(requestId, "INVALID_PHASE", "Answers are not accepted in the current phase.", false, 409);
+  }
+  if (status === "EXPIRED") {
+    return failure(requestId, "EXPIRED", "This room has expired.", false, 410);
   }
   return failure(requestId, "NOT_FOUND", "Room not found.", false, 404);
 }
@@ -120,7 +293,13 @@ Deno.serve(async (request) => {
     return failure(requestId, "INVALID_INPUT", "Game request is invalid.", false, 400);
   }
 
-  if (parsedRequest.data.action !== "create" && parsedRequest.data.action !== "join") {
+  if (
+    parsedRequest.data.action !== "create" &&
+    parsedRequest.data.action !== "join" &&
+    parsedRequest.data.action !== "start" &&
+    parsedRequest.data.action !== "snapshot" &&
+    parsedRequest.data.action !== "submit"
+  ) {
     return failure(requestId, "INVALID_INPUT", "This game action is not implemented yet.", false, 400);
   }
 
@@ -183,20 +362,64 @@ Deno.serve(async (request) => {
       throw new Error("Could not allocate a unique join code.");
     }
 
-    const normalizedJoinCode = parsedRequest.data.joinCode.toUpperCase();
-    const { data, error } = await adminClient
-      .rpc("join_room", {
-        p_profile_id: profile.id,
-        p_join_code: normalizedJoinCode,
-      })
-      .single<JoinedRoomRow>();
+    if (parsedRequest.data.action === "join") {
+      const normalizedJoinCode = parsedRequest.data.joinCode.toUpperCase();
+      const { data, error } = await adminClient
+        .rpc("join_room", {
+          p_profile_id: profile.id,
+          p_join_code: normalizedJoinCode,
+        })
+        .single<JoinedRoomRow>();
 
-    if (error) throw error;
-    if (!data || data.status !== "JOINED" || !data.room_id) {
-      return joinFailure(requestId, data?.status ?? "NOT_FOUND");
+      if (error) throw error;
+      if (!data || data.status !== "JOINED" || !data.room_id) {
+        return joinFailure(requestId, data?.status ?? "NOT_FOUND");
+      }
+
+      return success(requestId, { roomId: data.room_id });
     }
 
-    return success(requestId, { roomId: data.room_id });
+    if (parsedRequest.data.action === "start") {
+      const { data, error } = await adminClient
+        .rpc("start_room", {
+          p_profile_id: profile.id,
+          p_room_id: parsedRequest.data.roomId,
+          p_prompts: selectThreePrompts(),
+        })
+        .single<StartedRoomRow>();
+
+      if (error) throw error;
+      if (!data || data.status !== "STARTED" || !data.started_room_id) {
+        return startFailure(requestId, data?.status ?? "NOT_FOUND");
+      }
+    }
+
+    if (parsedRequest.data.action === "submit") {
+      const { data, error } = await adminClient
+        .rpc("submit_answer", {
+          p_profile_id: profile.id,
+          p_room_id: parsedRequest.data.roomId,
+          p_round_index: parsedRequest.data.roundIndex,
+          p_answer: parsedRequest.data.answer,
+        })
+        .single<SubmittedRoomRow>();
+
+      if (error) throw error;
+      if (!data || data.status !== "SUBMITTED" || !data.submitted_room_id) {
+        return submitFailure(requestId, data?.status ?? "NOT_FOUND");
+      }
+    }
+
+    const snapshot = await loadSnapshot(
+      adminClient,
+      profile.id,
+      parsedRequest.data.roomId,
+    );
+    if (!snapshot.ok) {
+      return snapshotFailure(requestId, snapshot.code);
+    }
+
+    return success(requestId, snapshot.snapshot);
   } catch {
     return failure(requestId, "INTERNAL_ERROR", "Game service is temporarily unavailable.", true, 500);
   }

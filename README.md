@@ -191,6 +191,36 @@ linked Supabase project. It verifies idempotent creation, case-insensitive invit
 codes, one successful concurrent join, one `ROOM_FULL` response, idempotent
 rejoin, and denied direct browser reads of `participants`.
 
+Task 2.3 adds transactional game start and controlled snapshots. The host can
+start only after both slots are occupied. One transaction freezes three distinct
+questions from the curated English fallback pool, advances the room to round 1,
+and leaves repeated start requests on the original prompt snapshots.
+
+After deploying migration `202609260003_start_game.sql` and the updated `game`
+Edge Function, run:
+
+```bash
+npm run verify:start
+```
+
+The check verifies that a one-player room cannot start, a non-host cannot start,
+both players receive the same current prompt, repeated start does not redraw it,
+and browser-equivalent access to `rounds` is denied. AI-generated question
+candidates are not connected yet; their absence never blocks this curated
+fallback.
+
+Tasks 2.4 and 2.5 add immutable submissions and pre-reveal data protection.
+Run the remote acceptance check with:
+
+```bash
+npm run verify:submit
+```
+
+The test verifies same-answer replay, conflicting-answer rejection, phase
+advancement only after both submissions, snapshots containing only the viewer's
+own answer, member-only reads of public room columns, and denied browser access
+to private room columns, rounds, and submission bodies.
+
 Dependencies are pinned exactly in `package.json` and `package-lock.json`. Run these commands from the existing repository root; do not create a nested project.
 
 ```text
