@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import {
+  createApiResponseSchema,
   RequestIdSchema,
   UtcDateTimeSchema,
   UuidSchema,
@@ -55,6 +56,14 @@ export const IdentityMeDataSchema = z
   .object({ profile: IdentityProfileSchema.nullable() })
   .strict();
 
+export const IdentityDataResponseSchema = createApiResponseSchema(
+  IdentityDataSchema,
+);
+export const IdentityMeResponseSchema = createApiResponseSchema(
+  IdentityMeDataSchema,
+);
+
 export type IdentityProfile = z.infer<typeof IdentityProfileSchema>;
 export type IdentityRequest = z.infer<typeof IdentityRequestSchema>;
 export type IdentityData = z.infer<typeof IdentityDataSchema>;
+export type IdentityMeData = z.infer<typeof IdentityMeDataSchema>;

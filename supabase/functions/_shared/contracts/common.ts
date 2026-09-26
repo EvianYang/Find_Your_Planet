@@ -14,6 +14,7 @@ export const ApiErrorCodeSchema = z.enum([
   "CONFLICT",
   "EXPIRED",
   "RATE_LIMITED",
+  "INTERNAL_ERROR",
   "EVALUATION_FAILED",
   "RECOVERY_FAILED",
   "RECOVERY_TARGET_NOT_EMPTY",

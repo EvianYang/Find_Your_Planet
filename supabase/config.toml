@@ -1,0 +1,2 @@
+[functions.identity]
+verify_jwt = false
