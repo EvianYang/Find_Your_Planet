@@ -1,6 +1,6 @@
 # Question generation handoff — tasks 3.1 / 3.2
 
-`../content/prompts.ts` exports `CURATED_PROMPTS`: the twelve PROJECT drafts, with fixed UUIDs, source and version. Keep each ID when editing its question and increment its version. A/C still need to try answering the questions before accepting 3.1.
+`../content/prompts.ts` exports `CURATED_PROMPTS`: 39 English questions (13 directions x 3, `curated-v2`), with fixed UUIDs, source and version. Keep each ID when editing its question and increment its version. A/C still need to try answering the questions before accepting 3.1.
 
 `generate-prompts.ts` exports `generatePromptCandidates(generate)`. Supply a server-side `QuestionGenerator` adapter using the provider/model confirmed in 0.6. It receives only instructions, curated question text and an AbortSignal. Disable provider SDK retries, pass the signal to the network call, and return decoded JSON matching `{questions:[{text}]}`. Credentials stay inside that adapter. No provider is assumed or configured here.
 

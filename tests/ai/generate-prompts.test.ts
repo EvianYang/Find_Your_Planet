@@ -3,15 +3,15 @@ import { test } from "node:test";
 import { CURATED_PROMPTS } from "../../supabase/functions/_shared/content/prompts.ts";
 import { generatePromptCandidates } from "../../supabase/functions/_shared/ai/generate-prompts.ts";
 
-test("curated bank has twelve unique versioned UUID questions within limits", () => {
-  assert.equal(CURATED_PROMPTS.length, 12);
-  assert.equal(new Set(CURATED_PROMPTS.map((p) => p.id)).size, 12);
-  assert.equal(new Set(CURATED_PROMPTS.map((p) => p.text)).size, 12);
+test("curated bank has 39 unique versioned UUID questions within limits", () => {
+  assert.equal(CURATED_PROMPTS.length, 39);
+  assert.equal(new Set(CURATED_PROMPTS.map((p) => p.id)).size, 39);
+  assert.equal(new Set(CURATED_PROMPTS.map((p) => p.text)).size, 39);
   for (const prompt of CURATED_PROMPTS) {
     assert.match(prompt.id, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
     assert.ok([...prompt.text].length > 0 && [...prompt.text].length <= 180);
     assert.equal(prompt.source, "curated");
-    assert.equal(prompt.version, "curated-v1");
+    assert.equal(prompt.version, "curated-v2");
   }
 });
 
