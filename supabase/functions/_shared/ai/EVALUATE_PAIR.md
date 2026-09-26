@@ -17,12 +17,12 @@
 
 ## 文件
 
-- `prompt.ts`：英文比较说明（comparison-v2），三个维度、0–4/null 的含义、证据规则、只比较联想，不判定人格或谁更懂谁。题目/答案视为数据；解释避免 left/right 或 A/B 称呼以免交换署名后混乱。实际抗指令干扰效果仍需真实模型校准。
+- `prompt.ts`：英文比较说明（comparison-v3），三个维度、0–4/null 的含义、证据规则、只比较联想，不判定人格或谁更懂谁。题目/答案视为数据；解释避免 left/right 或 A/B 称呼以免交换署名后混乱。实际抗指令干扰效果仍需真实模型校准。
 - `evaluate-pair.ts`：输入检查、UTF-8 排序、有界调用、输出与证据校验、槽位映射。
 - `distance.ts`：仅实现本轮所需的 coverage/distance，不实现三轮汇总。权重0.25/0.5/0.25，覆盖不足0.5时返回null，否则按合同生成0–1000整数距离。
 - `tests/ai/evaluate-pair.test.ts`：六组自动测试，不调用网络。
 
-JSON Schema 负责向提供方描述输出形状，不能代替本地 Zod 跨字段与证据校验；精确引用检查也不能证明所有语义解释都正确。3.5/3.6/3.9 后续继续打磨提示词与校准。
+JSON Schema 负责向提供方描述输出形状，不能代替本地 Zod 跨字段与证据校验；精确引用检查也不能证明所有语义解释都正确。3.5 的解释规则和验收样例已实现；真实语义稳定性仍需人工复核，3.6/3.9 继续校准。
 
 ## B 接入
 
@@ -58,3 +58,28 @@ EvaluationError.code 区分 INVALID_INPUT、INVALID_CONFIGURATION、TIMEOUT、PR
 限制：此前一次真实尝试返回 INVALID_OUTPUT，被本地校验拒绝，未降级为 insufficient、未发布假结果。随后显式运行两次成功；这不是稳定性保证。错误字段诊断已加入验证脚本，仅打印路径和错误类别。3.9 仍需更广样例校准，3.10/B 调度仍需有限重试、租约与持久化接线。
 
 实现依据：[OpenAI Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs)、[GPT-5 mini](https://developers.openai.com/api/docs/models/gpt-5-mini)。未改评估 schema、权重或距离公式，未接入房间数据库。
+
+## 3.5 具体解释（2026-09-26）
+
+解释规则与三组真实样例初验已完成，广泛稳定性留待 3.9；不是确定性语义保证。
+
+- `prompt.ts` 升为 comparison-v3：解释具体对象、动作与分歧，分别判断意象/联想/意图；只给地点不推断联想或意图。不制造共鸣、差异或人格标签，允许空数组与 null。
+- `openai-provider.ts` 将本地已有的 120/100/60 字符限制镜像到请求 JSON Schema。原来的 Unicode 自定义校验不会自动导出这些长度。未改共用 schema、权重或距离算法。推理从 minimal 调到 low，为短句与证据选择留出推理空间；耗时/成本需后续观察。
+- `tests/ai/explanation-cases.ts` 提供三个虚构英文样例及人工审核标准，不作为模型提示中的示例。
+- `scripts/check-explanations.ts` 显式调用真实模型，每例仅一次，无自动重试。只运行内置虚构样例，输出完整解读供人工审核；不得替换为真实玩家答案并记录日志。普通测试不联网。结构通过不等于语义通过。
+
+运行：`node --env-file=supabase/functions/.env.local scripts/check-explanations.ts`。
+
+最终版本 gpt-5-mini 三例均通过结构、字数、逐字证据和最终结果校验；人工检查无截断、无人格标签：
+
+| 样例 | 人工观察 | 耗时 | 距离 |
+| --- | --- | --- | --- |
+| 食谱 / 歌曲 | 指出媒介不同，但都通过保存延续家庭传统 | 8353ms | 250 |
+| 同一小屋、相反用途 | 识别独处避谈与邀请陌生人交谈的差异 | 5707ms | 750 |
+| 只有同一地点 | imagery=4，association/orientation=null；没有编造动机 | 5118ms | null |
+
+失败记录：调整过程中出现超长文本、INVALID_EVIDENCE，以及长度合规但句尾截断的结果。增加请求长度约束、短句/短引用要求与 low 推理后，上述最终批次通过。此前不同版本对同例评分有波动，表中分值仅是本次观察，不是黄金答案；三例通过不代表生产稳定性。没有放宽校验、截断修补返回值或用 fixture 替代失败。
+
+本地验证：29 项测试全部通过，`tsc -b` 及 AI 测试/脚本严格类型检查通过。测试覆盖实际请求中的嵌套长度限制且确认原 schema 不被修改。
+
+A 可审核解释呈现和 null 状态；B 仍需完成真实房间调用、租约、有限重试、持久化与保存白名单验证。handoff 文档全部保留。

@@ -80,7 +80,7 @@ test("20-second timeout aborts and ignores provider late completion", async (t) 
 
 test("comparison instructions require English prose while preserving verbatim evidence", async () => {
   const { COMPARISON_PROMPT_VERSION, COMPARISON_SYSTEM_PROMPT } = await import("../../supabase/functions/_shared/ai/prompt.ts");
-  assert.equal(COMPARISON_PROMPT_VERSION, "comparison-v2");
+  assert.equal(COMPARISON_PROMPT_VERSION, "comparison-v3");
   assert.match(COMPARISON_SYSTEM_PROMPT, /summary, explanation, commonality, divergence, and unknowns in English/);
   assert.match(COMPARISON_SYSTEM_PROMPT, /Never translate or paraphrase evidence/);
   assert.doesNotMatch(COMPARISON_SYSTEM_PROMPT, /[\u4e00-\u9fff]/u);
