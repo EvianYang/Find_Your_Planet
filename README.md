@@ -4,7 +4,7 @@ The distance between two stars. The distance between two hearts.
 
 **When we see the same question, do we imagine the same world?**
 
-Same Moon is a two-player AI social mini-game. Two people answer the same open-ended questions. AI interprets the associations in their answers, explains where their thoughts resonate and where they diverge, and turns that “distance between wavelengths” into the distance between two little asteroids in space.
+Find Your Planet is a two-player AI social mini-game. Two people answer the same open-ended questions. AI interprets the associations in their answers, explains where their thoughts resonate and where they diverge, and turns that “distance between wavelengths” into the distance between two little asteroids in space.
 
 It responds to the theme **“Fly Me to the Moon”**: stepping away from everyday reality, entering our imaginations, and getting a little closer to someone else’s world.
 
