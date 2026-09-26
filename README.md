@@ -110,7 +110,7 @@ Or:
 
 ## Developer starting points / 开发入口
 
-The repository now contains documentation and tracked scaffold placeholders, **not a runnable application**. No dependencies, backend, database or deployment have been configured. Existing source placeholders export nothing and must be implemented before use.
+The repository contains a minimal runnable React/TypeScript/Vite shell and shared B-owned contracts. The gameplay backend, database, AI evaluation, deployment, and product UI are not implemented yet.
 
 | Role | Start here | First handoff |
 |---|---|---|
@@ -122,7 +122,29 @@ Read [AGENTS.md](AGENTS.md), [PROJECT.md](docs/PROJECT.md), and [CONTRACTS.md](d
 
 **Start order:** B establishes the runtime and shared contracts → C provides fixtures → A builds the reveal UI while B/C implement services → integrate one real round before expanding.
 
-**Current setup:** there is no package.json yet, so `npm install` / `npm run dev` are not available. B's first task is to configure these in this repository root without overwriting the existing files. Do not create a second nested application.
+### Local development
+
+Requirements: Node.js 20.19 or newer and npm.
+
+```bash
+npm install
+cp .env.example .env.local
+npm run dev
+```
+
+The public Supabase variables may remain empty for the current local shell. An empty value does not represent a successful service connection.
+
+Checks and production build:
+
+```bash
+npm run typecheck
+npm run build
+npm run preview
+```
+
+The default page is the minimal runtime smoke test. Open `/?preview=contracts` for the B-owned local contract preview. This preview validates static local data only; it does not claim that Supabase or AI is connected.
+
+Dependencies are pinned exactly in `package.json` and `package-lock.json`. Run these commands from the existing repository root; do not create a nested project.
 
 ```text
 Find_Your_Planet/
@@ -153,6 +175,6 @@ Find_Your_Planet/
     └── integration/
 ```
 
-Empty backend/test directories contain `.gitkeep` so they are retained by Git. There are no deployable function entrypoints or migrations yet. Role guides link to the existing checklist task numbers; no tasks were automatically marked complete.
+Empty backend/test directories contain `.gitkeep` so they are retained by Git. There are no deployable function entrypoints or migrations yet. C's evaluation handoff is documented in [HANDOFF_C_EVALUATION](docs/HANDOFF_C_EVALUATION.md). Role guides link to the existing checklist task numbers; no tasks were automatically marked complete.
 
 The existing repository name `Find_Your_Planet` and English introduction are retained; the current product-planning name is **Find Your Planet**. Do not rename the remote or rewrite the introduction as part of scaffolding.
