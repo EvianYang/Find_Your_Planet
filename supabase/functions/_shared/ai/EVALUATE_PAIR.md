@@ -83,3 +83,21 @@ EvaluationError.code 区分 INVALID_INPUT、INVALID_CONFIGURATION、TIMEOUT、PR
 本地验证：29 项测试全部通过，`tsc -b` 及 AI 测试/脚本严格类型检查通过。测试覆盖实际请求中的嵌套长度限制且确认原 schema 不被修改。
 
 A 可审核解释呈现和 null 状态；B 仍需完成真实房间调用、租约、有限重试、持久化与保存白名单验证。handoff 文档全部保留。
+
+## 3.6 输出与证据校验验收（2026-09-26）
+
+状态：C 的函数级验收完成。现有 schema 与 evaluatePair 已实现所需校验，本次补充反例验证，没有修改共用合同、运行时代码、权重或距离算法。
+
+新增 `tests/ai/output-validation.test.ts`，通过实际 evaluatePair 入口验证：
+
+- 顶层及每个维度的缺失/额外字段、类型错误、相似度越界或非整数被拒绝。
+- summary/explanation 的120、其他文本数组项的100、证据的60 Unicode码点边界；两项数组允许，三项拒绝；空白引用拒绝；不截断修补非法文本。
+- 三维两侧的所有引用均检查归属，包括第二条引用。伪造、串人、大小写改写、空格改写、非连续拼接均拒绝。两份答案确实共有的文本允许被双方引用。
+- 非 null 维度必须双侧有证据；insufficient 必须全 null，全 null 不能标为 ok；未知维度若附带证据也必须逐字合法。
+- 提供方 HTTP 错误、损坏响应、拒答和非法 JSON 经适配器进入比较函数后均抛技术错误；没有自动重试、fixture 回退或伪造 insufficient。已有测试继续覆盖超时取消和交换槽位映射。
+
+错误边界：解码成功后的结构错误为 INVALID_OUTPUT，引用归属错误为 INVALID_EVIDENCE；在 provider.compare 内抛出的异常由 evaluatePair 统一清洗为 PROVIDER_ERROR（包括适配器发现的非法 JSON），超时为 TIMEOUT。对外不附带原始答案或提供方响应。
+
+验证：`node --test tests/**/*.test.ts` 共35项通过；`npx tsc -b` 及全部测试入口的严格 TypeScript 检查通过。本次不调用真实模型，故不新增模型稳定性结论。
+
+验收边界：逐字引用只能证明文本归属，不能证明解释语义、英文质量或人格推断正确，仍由3.9校准。B仍需在实际接口中封装公共错误、管理重试与持久化；本次不代表房间联调验收，3.7距离专项验收另行进行。
