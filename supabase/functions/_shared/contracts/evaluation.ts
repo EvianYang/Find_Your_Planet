@@ -1,17 +1,25 @@
 import { z } from "zod";
 
+/**
+ * Hard limits in Unicode code points. They only stop runaway output; the comparison prompt asks for
+ * much shorter text (summary/explanation about 100, list items about 90). Evidence quotes stay short.
+ */
+export const INTERPRETATION_MAX = 200;
+export const LIST_ITEM_MAX = 160;
+export const EVIDENCE_MAX = 60;
+
 const boundedText = (max: number) => z.string().refine(
   (value) => Array.from(value).length <= max,
   { message: `Must contain at most ${max} Unicode code points` },
 );
-const EvidenceSchema = z.array(boundedText(60).refine((v) => v.trim().length > 0)).max(2);
+const EvidenceSchema = z.array(boundedText(EVIDENCE_MAX).refine((v) => v.trim().length > 0)).max(2);
 const SimilaritySchema = z.union([
   z.literal(0), z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.null(),
 ]);
 export const DistanceSchema = z.number().int().min(0).max(1000).nullable();
 export const RubricVersionSchema = z.literal("fmp-v1");
-const explanation = boundedText(120);
-const shortTextArray = z.array(boundedText(100)).max(2);
+const explanation = boundedText(INTERPRETATION_MAX);
+const shortTextArray = z.array(boundedText(LIST_ITEM_MAX)).max(2);
 
 export const ModelDimensionSchema = z.object({
   similarity: SimilaritySchema,
@@ -43,6 +51,23 @@ const hasConsistentStatus = (value: {
   dimensions: Record<string, { similarity: number | null }>;
 }) => (value.status === "ok") === Object.values(value.dimensions).some((d) => d.similarity !== null);
 
+/** A letter outside the Latin script, e.g. Chinese. Accents (café) and emoji pass; evidence quotes are not checked. */
+const NON_LATIN_LETTER = /(?=\p{L})\P{Script=Latin}/u;
+const interpretationIsEnglish = (value: {
+  summary: string;
+  commonality: string[];
+  divergence: string[];
+  unknowns: string[];
+  dimensions: Record<string, { explanation: string }>;
+}) => ![
+  value.summary,
+  ...value.commonality,
+  ...value.divergence,
+  ...value.unknowns,
+  ...Object.values(value.dimensions).map((d) => d.explanation),
+].some((text) => NON_LATIN_LETTER.test(text));
+
+// Model output only: the English check is not part of RoundResultSchema, so results stored earlier still parse.
 export const ModelComparisonSchema = z.object({
   ...textFields,
   dimensions: z.object({
@@ -50,7 +75,8 @@ export const ModelComparisonSchema = z.object({
     association: ModelDimensionSchema,
     orientation: ModelDimensionSchema,
   }).strict(),
-}).strict().refine(hasConsistentStatus, { message: "Status must match assessable dimensions" });
+}).strict().refine(hasConsistentStatus, { message: "Status must match assessable dimensions" })
+  .refine(interpretationIsEnglish, { message: "Interpretation fields must be written in English" });
 
 export const RoundResultSchema = z.object({
   ...textFields,

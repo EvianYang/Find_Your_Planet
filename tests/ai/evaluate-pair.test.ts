@@ -80,8 +80,14 @@ test("20-second timeout aborts and ignores provider late completion", async (t) 
 
 test("comparison instructions require English prose while preserving verbatim evidence", async () => {
   const { COMPARISON_PROMPT_VERSION, COMPARISON_SYSTEM_PROMPT } = await import("../../supabase/functions/_shared/ai/prompt.ts");
-  assert.equal(COMPARISON_PROMPT_VERSION, "comparison-v3");
+  assert.equal(COMPARISON_PROMPT_VERSION, "comparison-v4");
   assert.match(COMPARISON_SYSTEM_PROMPT, /summary, explanation, commonality, divergence, and unknowns in English/);
+  assert.match(COMPARISON_SYSTEM_PROMPT, /non-English text may appear only inside evidence quotes/);
+  assert.match(COMPARISON_SYSTEM_PROMPT, /Never restate the question's premise as an insight/);
+  assert.match(COMPARISON_SYSTEM_PROMPT, /Do not list generic gaps/);
+  assert.match(COMPARISON_SYSTEM_PROMPT, /under 100 characters/);
+  assert.match(COMPARISON_SYSTEM_PROMPT, /at most 200 Unicode code points/);
+  assert.doesNotMatch(COMPARISON_SYSTEM_PROMPT, /\$\{/);
   assert.match(COMPARISON_SYSTEM_PROMPT, /Never translate or paraphrase evidence/);
   assert.doesNotMatch(COMPARISON_SYSTEM_PROMPT, /[\u4e00-\u9fff]/u);
 });

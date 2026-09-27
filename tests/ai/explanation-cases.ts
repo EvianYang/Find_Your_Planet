@@ -30,4 +30,34 @@ export const EXPLANATION_CASES = [
     },
     review: "Recognize the shared location but do not invent solitude, sociability, or feelings; association and orientation must be null.",
   },
+  {
+    id: "premise-is-not-an-insight",
+    input: {
+      prompt: "For one minute, you can write a message across the sky that the whole world can read. What does it say?",
+      answers: { a: "Good morning, everyone!", b: "Look up and breathe for a second." },
+    },
+    review: "The summary must not say both are sky messages or slogans for everyone; contrast a greeting to the world with asking people to pause. Unknowns must not be a generic 'no reason given'.",
+  },
+  {
+    id: "non-english-answer",
+    input: {
+      prompt: "Scientists prove one legendary creature was real all along. Which one, and where has it been hiding?",
+      answers: {
+        a: "A dragon, sleeping under a quiet lake in Scotland.",
+        b: "凤凰，一直躲在火山口里，等下一次日出才出来。",
+      },
+    },
+    review: "Every interpretation field is English, with the Chinese idea translated; only evidence quotes may contain Chinese, copied exactly.",
+  },
+  {
+    id: "rich-answers-fit-the-limit",
+    input: {
+      prompt: "Scientists prove one legendary creature was real all along. Which one, and where has it been hiding?",
+      answers: {
+        a: "A ghost. It was never in old castles; it hides in the shadows of your own room and only moves when you stop looking.",
+        b: "A phoenix. It stays inside a mountain and only appears once a century, when a child who is meant to find it is born.",
+      },
+    },
+    review: "The summary is one complete sentence near the 100-character target, never cut off, and names the contrast between an everyday hidden presence and a rare, destined appearance.",
+  },
 ] as const;

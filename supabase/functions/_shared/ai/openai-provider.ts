@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { EVIDENCE_MAX, INTERPRETATION_MAX, LIST_ITEM_MAX } from "../contracts/evaluation.ts";
 import { EvaluationError } from "./evaluate-pair.ts";
 import type { ComparisonProvider } from "./evaluate-pair.ts";
 
@@ -11,7 +12,8 @@ const ResponseSchema = z.object({
 });
 
 /** Zod custom Unicode refinements do not appear in exported JSON Schema.
- * Mirror their existing limits for provider generation; local validation remains authoritative.
+ * Mirror the hard limits for provider generation; local validation remains authoritative.
+ * They sit well above the prompt's target lengths, so generation is not cut off at the target.
  */
 export function withComparisonTextLimits(schema: Record<string, unknown>): Record<string, unknown> {
   const copy = structuredClone(schema);
@@ -22,10 +24,10 @@ export function withComparisonTextLimits(schema: Record<string, unknown>): Recor
     if (object.properties && typeof object.properties === "object") {
       for (const [key, value] of Object.entries(object.properties)) {
         const field = value as Record<string, unknown>;
-        if (key === "summary" || key === "explanation") field.maxLength = 120;
+        if (key === "summary" || key === "explanation") field.maxLength = INTERPRETATION_MAX;
         if (["commonality", "divergence", "unknowns", "leftEvidence", "rightEvidence"].includes(key)) {
           const items = field.items as Record<string, unknown>;
-          if (items) items.maxLength = key.endsWith("Evidence") ? 60 : 100;
+          if (items) items.maxLength = key.endsWith("Evidence") ? EVIDENCE_MAX : LIST_ITEM_MAX;
         }
       }
     }
@@ -48,7 +50,7 @@ export function createOpenAIProvider(config: { apiKey: string; model: string }, 
           model: config.model, store: false,
           instructions: request.system,
           input: [{ role: "user", content: request.user }],
-          reasoning: { effort: "low" }, max_output_tokens: 2500,
+          reasoning: { effort: "medium" }, max_output_tokens: 5000,
           text: { format: { type: "json_schema", name: "pair_comparison", strict: true, schema: withComparisonTextLimits(request.jsonSchema) } },
         }),
       });

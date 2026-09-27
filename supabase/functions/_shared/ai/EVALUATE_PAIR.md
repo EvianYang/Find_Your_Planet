@@ -124,3 +124,21 @@ A 可审核解释呈现和 null 状态；B 仍需完成真实房间调用、租�
 验证：39项本地测试全部通过；应用 `tsc -b` 与全部测试严格类型检查通过。本次不调用真实模型。测试中的模型结果是明确的受控评分，不是对样例含义的真实模型验收。
 
 限制：算法不使用字数，无法据此证明模型本身不存在长短偏好；该语义部分仍由3.9校准。3.8三轮汇总未在本次实现；A须正确展示null，B仍需实际房间结果发布与持久化联调。
+
+## comparison-v4：解读质量（2026-09-26，待真实模型验收）
+
+真实试玩发现三类问题：summary 复述题干（如 “Both are short global sky-messages”）、unknowns 总是 “No explanation why…” 这类套话、英文解读里夹中文；另有一条 summary 恰好在 120 字符处被截断（请求 JSON Schema 的 maxLength 让生成在上限处停住）。
+
+- `prompt.ts` 升为 comparison-v4：
+  - 任何字段都不把题干前提当作洞察；commonality 只写超出题干的共同点，只有题干重合时留空；
+  - summary 要说出每份答案对题目的切入角度，以及两者在哪里汇合或分叉；只描述答案，不描述人；附一个与游戏题目无关的强弱对照例；
+  - 避免 “Both are X: one …, the other …” 在 X 只是题干时的套路；
+  - 字数改为“参考 + 宽硬上限”：summary / explanation 参考 10–16 词、约 100 字符，commonality / divergence / unknowns 每条参考约 90 字符；硬上限放宽为 200 / 160（evidence 仍是 60），统一定义在 `contracts/evaluation.ts` 的 `INTERPRETATION_MAX`、`LIST_ITEM_MAX`、`EVIDENCE_MAX`，提示词、请求 JSON Schema、`records.ts` 与测试都引用这些常量。原来把 120 同时当目标和生成上限，模型会在第 120 个字符处被截断；
+  - unknowns 只写会改变比较结论的具体疑问，不写适用于任何短答案的缺口；可以为空；
+  - 答案是其他语言时，解读字段仍用英文转述，非英文只允许出现在 evidence 里。
+- `openai-provider.ts` 推理强度从 low 调为 medium，`max_output_tokens` 从 2500 调为 5000（推理 token 也计入）；模型改为 gpt-5.4-mini 通过环境变量 `LLM_MODEL` 配置，代码不写死模型。
+- 语言检查：`ModelComparisonSchema` 拒绝 summary、explanation、commonality、divergence、unknowns 中的非拉丁字母（如中文），按 INVALID_OUTPUT 处理并走现有自动重试；evidence 不检查，可逐字引用中文答案。检查只在模型输出这一步，不加在 `RoundResultSchema`，已保存的旧结果仍可解析。
+- `tests/ai/explanation-cases.ts` 新增三个虚构样例：题干不是洞察、非英文答案、信息多的答案仍要完整放进上限。
+- 未改 fmp-v1、字段结构、权重或距离算法；本地校验改了长度上限，并新增模型输出的语言检查。
+
+待验证：用 `scripts/check-explanations.ts` 以 gpt-5.4-mini 跑全部样例，人工检查 summary 与 unknowns，记录耗时（单次调用上限 20 秒）以及是否出现 `incomplete`（medium 的推理 token 也计入 `max_output_tokens: 5000`）或因语言检查触发的 INVALID_OUTPUT。本机没有 `supabase/functions/.env.local`，本次未调用真实模型。

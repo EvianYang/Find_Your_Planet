@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { ModelComparisonSchema, RoundResultSchema, createModelComparisonSchema } from "../../supabase/functions/_shared/contracts/evaluation.ts";
+import { INTERPRETATION_MAX, ModelComparisonSchema, RoundResultSchema, createModelComparisonSchema } from "../../supabase/functions/_shared/contracts/evaluation.ts";
 import { GameRequestSchema, GameSnapshotSchema } from "../../supabase/functions/_shared/contracts/game.ts";
 import { EvaluateResponseSchema, ComparisonInputSchema } from "../../supabase/functions/_shared/contracts/evaluate.ts";
 import { IdentityRequestSchema } from "../../supabase/functions/_shared/contracts/identity.ts";
@@ -34,11 +34,11 @@ test("coverage boundary and fmp-v1 distance are enforced", () => {
 });
 
 test("exact quotes belong to the correct answer; Unicode limits use code points", () => {
-  const d = { similarity: 4, leftEvidence: ["umbrella"], rightEvidence: ["cup"], explanation: "🧩".repeat(120) };
+  const d = { similarity: 4, leftEvidence: ["umbrella"], rightEvidence: ["cup"], explanation: "🧩".repeat(INTERPRETATION_MAX) };
   const model = { status: "ok", dimensions: { imagery: d, association: d, orientation: d }, summary: "Explanation", commonality: [], divergence: [], unknowns: [] };
   assert.ok(createModelComparisonSchema("Move the umbrella", "Move the cup").safeParse(model).success);
   assert.equal(createModelComparisonSchema("Move the cup", "Move the umbrella").safeParse(model).success, false);
-  assert.equal(ModelComparisonSchema.safeParse({ ...model, summary: "🧩".repeat(121) }).success, false);
+  assert.equal(ModelComparisonSchema.safeParse({ ...model, summary: "🧩".repeat(INTERPRETATION_MAX + 1) }).success, false);
   assert.equal(ModelComparisonSchema.safeParse({ ...model, dimensions: { ...model.dimensions, imagery: { ...d, similarity: 2.5 } } }).success, false);
 });
 

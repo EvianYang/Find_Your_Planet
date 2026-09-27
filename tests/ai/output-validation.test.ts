@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { evaluatePair, EvaluationError } from "../../supabase/functions/_shared/ai/evaluate-pair.ts";
 import { createOpenAIProvider } from "../../supabase/functions/_shared/ai/openai-provider.ts";
-import { ModelComparisonSchema } from "../../supabase/functions/_shared/contracts/evaluation.ts";
+import { EVIDENCE_MAX, INTERPRETATION_MAX, LIST_ITEM_MAX, ModelComparisonSchema } from "../../supabase/functions/_shared/contracts/evaluation.ts";
 import type { ModelComparison } from "../../supabase/functions/_shared/contracts/evaluation.ts";
 
 const input = {
@@ -61,13 +61,13 @@ test("validation rejects missing, extra and incorrectly typed fields at every ob
 
 test("text boundaries count Unicode code points and reject excess without truncation", async () => {
   const boundary = valid();
-  boundary.summary = "🧩".repeat(120);
+  boundary.summary = "🧩".repeat(INTERPRETATION_MAX);
   for (const name of dimensions) {
-    boundary.dimensions[name].explanation = "🧩".repeat(120);
-    for (const side of sides) boundary.dimensions[name][side] = ["🧩".repeat(60), "🧩"];
+    boundary.dimensions[name].explanation = "🧩".repeat(INTERPRETATION_MAX);
+    for (const side of sides) boundary.dimensions[name][side] = ["🧩".repeat(EVIDENCE_MAX), "🧩"];
   }
-  for (const field of ["commonality", "divergence", "unknowns"] as const) boundary[field] = ["🧩".repeat(100), "🧩"];
-  const accepted = await evaluatePair({ ...input, answers: { a: "🧩".repeat(60), b: "🧩".repeat(60) } }, {
+  for (const field of ["commonality", "divergence", "unknowns"] as const) boundary[field] = ["🧩".repeat(LIST_ITEM_MAX), "🧩"];
+  const accepted = await evaluatePair({ ...input, answers: { a: "🧩".repeat(EVIDENCE_MAX), b: "🧩".repeat(EVIDENCE_MAX) } }, {
     modelId: "validation-test", async compare() { return boundary; },
   });
   assert.equal(accepted.summary, boundary.summary);
@@ -76,10 +76,10 @@ test("text boundaries count Unicode code points and reject excess without trunca
   await rejected(excessive);
   for (const name of dimensions) {
     const raw = valid();
-    raw.dimensions[name].explanation = "🧩".repeat(121);
+    raw.dimensions[name].explanation = "🧩".repeat(INTERPRETATION_MAX + 1);
     await rejected(raw);
     for (const side of sides) {
-      for (const quotes of [[], [""], [" \n\t"], ["x".repeat(61)], ["x", "x", "x"]]) {
+      for (const quotes of [[], [""], [" \n\t"], ["x".repeat(EVIDENCE_MAX + 1)], ["x", "x", "x"]]) {
         const raw = valid();
         raw.dimensions[name][side] = quotes;
         await rejected(raw);
@@ -87,7 +87,7 @@ test("text boundaries count Unicode code points and reject excess without trunca
     }
   }
   for (const field of ["commonality", "divergence", "unknowns"] as const) {
-    for (const items of [["🧩".repeat(101)], ["one", "two", "three"]]) {
+    for (const items of [["🧩".repeat(LIST_ITEM_MAX + 1)], ["one", "two", "three"]]) {
       const raw = valid();
       raw[field] = items;
       await rejected(raw);
@@ -158,4 +158,23 @@ test("provider transport failures and malformed responses never become insuffici
     });
     assert.equal(calls, 1);
   }
+});
+
+test("interpretation fields must be English; only evidence may quote another language", async () => {
+  const mixed = (patch: (raw: ModelComparison) => void) => { const raw = valid(); patch(raw); return raw; };
+  await rejected(mixed((raw) => { raw.summary = "One keeps a tradition; the other 开始 a new one."; }));
+  await rejected(mixed((raw) => { raw.dimensions.association.explanation = "Both describe 传统 food."; }));
+  for (const field of ["commonality", "divergence", "unknowns"] as const) {
+    await rejected(mixed((raw) => { raw[field] = ["Whether the soup is 真的 new."]; }));
+  }
+  const accepted = await evaluatePair({ ...input, answers: { a: input.answers.a, b: "斑马汤开启新传统。" } }, {
+    modelId: "validation-test",
+    async compare() {
+      return mixed((raw) => {
+        raw.summary = "Keeping a café-style tradition contrasts with starting one 🍲.";
+        for (const name of dimensions) raw.dimensions[name].rightEvidence = ["斑马汤"];
+      });
+    },
+  });
+  assert.equal(accepted.dimensions.imagery.bEvidence[0], "斑马汤");
 });
