@@ -6,7 +6,8 @@ import "../styles/tokens.css";
 import "../styles/screens.css";
 import { PlanetPair } from "../components/PlanetPair.tsx";
 import { errorCodeOf, errorCopy, retryableOf, type ErrorContext } from "../components/error-copy.ts";
-import { Button, FieldError, WaitIcon } from "../components/ui.tsx";
+import { MoonLoader } from "../components/MoonLoader.tsx";
+import { Button, FieldError } from "../components/ui.tsx";
 import { AnswerScreen } from "./AnswerScreen.tsx";
 import { LobbyScreen } from "./LobbyScreen.tsx";
 import { ResultScreen } from "./ResultScreen.tsx";
@@ -326,7 +327,7 @@ export function GameStatus({
           </>
         ) : (
           <p className="sc-status" role="status">
-            <WaitIcon />
+            <MoonLoader size={20} />
             <span>{message}</span>
           </p>
         )}

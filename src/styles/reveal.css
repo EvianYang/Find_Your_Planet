@@ -78,7 +78,6 @@
 .rv-btn--primary:hover { background: #ffffff; }
 .rv-btn--secondary { background: transparent; color: var(--fyp-ink); border: 1px solid var(--fyp-line-strong); }
 .rv-btn[aria-disabled="true"] { cursor: progress; opacity: 0.82; }
-.rv-spin { width: 16px; height: 16px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: fyp-rv-spin 0.9s linear infinite; }
 .rv-error { margin: 0; display: flex; gap: 8px; align-items: flex-start; justify-content: center; font-size: 14px; line-height: 21px; color: var(--fyp-warn); text-align: left; }
 .rv-error svg { flex: none; width: 16px; height: 16px; margin-top: 2px; }
 .rv-hint,
@@ -109,7 +108,6 @@
 }
 @keyframes fyp-rv-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @keyframes fyp-rv-fade { from { opacity: 0; } to { opacity: 1; } }
-@keyframes fyp-rv-spin { to { transform: rotate(360deg); } }
 
 @container (max-width: 359px) {
   .rv-sheet { padding: 18px 16px 0; gap: 18px; }
@@ -135,7 +133,5 @@
 
 @media (prefers-reduced-motion: reduce) {
   .fyp-reveal--play *,
-  .fyp-reveal--enter .rv-sheet,
-  .rv-spin { animation: none !important; }
-  .rv-spin { border-right-color: currentColor; opacity: 0.6; }
+  .fyp-reveal--enter .rv-sheet { animation: none !important; }
 }

@@ -17,6 +17,7 @@ const DEMOS = {
   game: lazy(() => import("./screens/GamePreview.tsx")),
   screens: lazy(() => import("./screens/ScreensPreview.tsx")),
   reveal: lazy(() => import("./screens/RevealPreview.tsx")),
+  intro: lazy(() => import("./screens/IntroPreview.tsx")),
 };
 const isDemo = (value: string | null): value is keyof typeof DEMOS => value !== null && Object.hasOwn(DEMOS, value);
 

@@ -5,6 +5,7 @@ import type { GameSnapshot, Prompt, RoundIndex, Slot } from "@contracts/game.ts"
 import "../styles/tokens.css";
 import "../styles/reveal.css";
 import { AnswerCard } from "../components/AnswerCard.tsx";
+import { MoonLoader } from "../components/MoonLoader.tsx";
 import { PlanetPair } from "../components/PlanetPair.tsx";
 import { errorCopy } from "../components/error-copy.ts";
 import { moonLitForRounds, unknownKind } from "../components/planet-geometry.ts";
@@ -278,7 +279,7 @@ function RevealView({
             <h2><WarnIcon />Trying the comparison again</h2>
             <p>This can take a few seconds. Both answers are still saved.</p>
             <button className="rv-btn rv-btn--primary" type="button" aria-disabled="true" aria-busy="true">
-              <span className="rv-spin" aria-hidden="true" />
+              <MoonLoader size={16} />
               Trying again
             </button>
             <p className="rv-fine">No need to tap again.</p>
@@ -350,7 +351,7 @@ function RevealView({
                     aria-disabled={continuing || undefined}
                     onClick={() => void continueRound()}
                   >
-                    {continuing ? <span className="rv-spin" aria-hidden="true" /> : null}
+                    {continuing ? <MoonLoader size={16} /> : null}
                     {continuing ? "One moment" : roundIndex === 3 ? "See the full game" : "Next round"}
                   </button>
                   {continueError ? (
