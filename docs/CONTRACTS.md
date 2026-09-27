@@ -82,7 +82,9 @@ Snapshot：roomId、viewerSlot、joinCode、phase、currentRound、revision、pl
 
 start 和新题写回锁同一个 room。start 只从已经落库的合格题池无放回抽 3 题；新题未完成则只从人工题抽。开始后迟到生成结果丢弃，不改变本局题目。保存完整题目快照与版本。不同局可以抽到相同题，但都重新作答。
 
-实现（迁移 `202609270010_prompt_generation.sql`）：候选存在私有表 `room_prompt_pools`（开启 RLS、浏览器无权限、不在 Realtime 发布里），不放在 rooms 上，避免随 rooms 的 Realtime 更新外泄。`claim_prompt_generation` 锁 room 行，非 lobby 一律 INVALID_PHASE；只有第一次调用得到 CLAIMED 并写入 processing 与 30 秒租约，之后的调用只读已有状态；租约过期的 processing 记为 failed，不重新调用模型。`game` 函数在锁外调用生成（8 秒上限、不重试），经 `filterGeneratedPrompts` 筛选后由 `finish_prompt_generation` 在同一把 room 锁下写回：仍在 lobby 则保存为 ready / empty / failed；已开局、已过期则记为 discarded；租约已过或任务已终结则丢弃（STALE，对客户端报 failed）。start 在调用 `start_room` 前读取已保存（ready）的候选，用 `selectGamePrompts` 从人工题与候选中均匀无放回抽 3 题，不设来源配额；仍在 processing 的尝试不阻塞开局。`start_room` 在同一把 room 锁下复核题池：读取之后才变成 ready 时返回 POOL_CHANGED，函数重读后再抽一次（ready 是终态，最多重试一次），所以先拿到锁并保存成功的新题一定会被 start 看到。题池读取失败时只用人工题照常开局。日志只记录状态、原因和数量，不记录题目原文。客户端在大厅里调用一次（两位成员都可能调用，由数据库去重），失败不提示、不影响开局。
+实现（迁移 `202609270010_prompt_generation.sql`）：候选存在私有表 `room_prompt_pools`（开启 RLS、浏览器无权限、不在 Realtime 发布里），不放在 rooms 上，避免随 rooms 的 Realtime 更新外泄。`claim_prompt_generation` 锁 room 行，非 lobby 一律 INVALID_PHASE；只有第一次调用得到 CLAIMED 并写入 processing 与 30 秒租约，之后的调用只读已有状态；租约过期的 processing 记为 failed，不重新调用模型。`game` 函数在锁外调用生成（8 秒上限、不重试），经 `filterGeneratedPrompts` 筛选后由 `finish_prompt_generation` 在同一把 room 锁下写回：仍在 lobby 则保存为 ready / empty / failed；已开局、已过期则记为 discarded；租约已过或任务已终结则丢弃（STALE，对客户端报 failed）。start 在调用 `start_room` 前读取已保存（ready）的候选，用 `selectGamePrompts` 从人工题与候选中均匀无放回抽 3 题，不设来源配额；仍在 processing 的尝试不阻塞开局。`start_room` 在同一把 room 锁下复核题池：读取之后才变成 ready 时返回 POOL_CHANGED，函数重读后再抽一次（ready 是终态，最多重试一次），所以先拿到锁并保存成功的新题一定会被 start 看到。题池读取失败时只用人工题照常开局。
+
+避免重复（迁移 `202609270011_recent_prompts.sql`）：开局前用 `recent_prompt_ids` 取两位玩家各自最近 5 局已开始游戏的题目 ID（不限搭档与房间），`selectGamePrompts` 在剩余题不少于 3 道时避开它们，否则从全部题中抽，保证总能开局。只影响抽题，不锁定或复用任何答案；查询失败时照常从全部题中抽。日志只记录状态、原因和数量，不记录题目原文。客户端在大厅里调用一次（两位成员都可能调用，由数据库去重），失败不提示、不影响开局。
 
 ## 7. 对称评估与结构化结果
 

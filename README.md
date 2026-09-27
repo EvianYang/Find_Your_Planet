@@ -253,9 +253,11 @@ npm run verify:recovery
 Tasks 3.2 and 3.3 add one AI question-generation attempt per room while it waits in
 the lobby (`game` / `prepare_prompts`). Candidates are stored in a private table, the
 start never waits for generation, and a result that arrives after the start is
-discarded. After migration `202609270010_prompt_generation.sql` and the `game`
-function are deployed with `LLM_API_KEY` and `LLM_MODEL`, run the remote check
-(it makes real, billable generation calls):
+discarded. At start, questions that either player saw in their last five started
+games are skipped while enough others remain (migration
+`202609270011_recent_prompts.sql`). After both migrations and the `game` function
+are deployed with `LLM_API_KEY` and `LLM_MODEL`, run the remote check (it makes
+real, billable generation calls):
 
 ```bash
 npm run verify:prompts

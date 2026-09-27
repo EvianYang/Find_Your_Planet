@@ -151,3 +151,17 @@ test("3.2 a room that never prepared cannot start an attempt after the game bega
   assert.equal(tooLate.status, 409);
   assert.equal(tooLate.body.error.code, "INVALID_PHASE");
 });
+
+test("start prefers questions neither player saw in their last five games", { timeout: 120_000 }, async () => {
+  // Smoke check through the public API: only each game's first question is visible, and six games stay
+  // inside the five-game window, so their first questions must all differ. Not billable (no generation).
+  const [host, guest] = await Promise.all([createActor("recent-host"), createActor("recent-guest")]);
+  const firstPrompts = [];
+  for (let game = 0; game < 6; game += 1) {
+    const roomId = await readyRoom(host, guest);
+    const start = await gameRequest(host.accessToken, { action: "start", roomId, requestId: crypto.randomUUID() });
+    assert.equal(start.status, 200);
+    firstPrompts.push(start.body.data.currentPrompt.id);
+  }
+  assert.equal(new Set(firstPrompts).size, firstPrompts.length, `repeated first question: ${firstPrompts}`);
+});

@@ -74,3 +74,32 @@ test("rejects invalid randomness, duplicate snapshots and pools smaller than thr
   assert.throws(() => selectGamePrompts({ existingSelection: [CURATED_PROMPTS[0], CURATED_PROMPTS[0], CURATED_PROMPTS[1]] }), /unique/);
   assert.throws(() => selectGamePrompts({ curated: CURATED_PROMPTS.slice(0, 2) }), /At least three/);
 });
+
+test("recently seen prompts are avoided while at least three others remain", () => {
+  // Avoid all but four curated prompts: every draw must come from those four.
+  const keep = new Set(CURATED_PROMPTS.slice(0, 4).map((prompt) => prompt.id));
+  const avoidIds = CURATED_PROMPTS.filter((prompt) => !keep.has(prompt.id)).map((prompt) => prompt.id);
+  for (let i = 0; i < 200; i++) {
+    const { prompts } = selectGamePrompts({ avoidIds });
+    assert.equal(prompts.length, 3);
+    assert.ok(prompts.every((prompt) => keep.has(prompt.id)));
+  }
+  // A saved generated question is never "recent", so it stays eligible.
+  const fresh = [generated("generated-new", "A doorway opens into any era. Where do you step?")];
+  const picks = new Set<string>();
+  for (let i = 0; i < 300; i++) {
+    for (const prompt of selectGamePrompts({ avoidIds, generatedCandidates: fresh }).prompts) picks.add(prompt.id);
+  }
+  assert.ok(picks.has("generated-new"));
+});
+
+test("when fewer than three unseen prompts remain, the whole pool is used so the game can start", () => {
+  const avoidIds = CURATED_PROMPTS.slice(2).map((prompt) => prompt.id);
+  const seen = new Set<string>();
+  for (let i = 0; i < 300; i++) {
+    const { prompts } = selectGamePrompts({ avoidIds });
+    assert.equal(new Set(prompts.map((prompt) => prompt.id)).size, 3);
+    for (const prompt of prompts) seen.add(prompt.id);
+  }
+  assert.ok(seen.size > 3, "falls back to the full pool, not just the two unseen prompts");
+});

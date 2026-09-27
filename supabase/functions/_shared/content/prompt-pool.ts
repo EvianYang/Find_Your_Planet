@@ -89,12 +89,15 @@ export type GamePromptSelection = {
 /**
  * Select three prompts uniformly without replacement from every ready prompt.
  * B must call this while holding the same room lock used to persist start.
+ * avoidIds (for example what either player saw in recent games) are left out while at least three
+ * other prompts remain; otherwise the whole pool is used, so a game can always start.
  */
 export function selectGamePrompts(options: {
   generatedCandidates?: readonly unknown[];
   existingSelection?: readonly unknown[] | null;
   random?: () => number;
   curated?: readonly Prompt[];
+  avoidIds?: Iterable<string>;
 } = {}): GamePromptSelection {
   if (options.existingSelection) {
     return {
@@ -108,7 +111,10 @@ export function selectGamePrompts(options: {
   const curated = options.curated ?? CURATED_PROMPTS;
   const checkedCurated = PromptSchema.array().parse(curated);
   const generated = filterGeneratedPrompts(options.generatedCandidates ?? [], checkedCurated);
-  const remaining = [...checkedCurated, ...generated.accepted];
+  const pool = [...checkedCurated, ...generated.accepted];
+  const avoid = new Set(options.avoidIds ?? []);
+  const fresh = pool.filter((prompt) => !avoid.has(prompt.id));
+  const remaining = fresh.length >= 3 ? fresh : pool;
   if (remaining.length < 3) throw new Error("At least three usable prompts are required");
   const random = options.random ?? Math.random;
   const prompts: Prompt[] = [];

@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { corsHeaders } from "@supabase/supabase-js/cors";
+import { z } from "zod";
 
 import {
   type ApiErrorCode,
@@ -55,6 +56,10 @@ type SubmittedRoomRow = { status: string; submitted_room_id: string | null };
 type ContinuedRoomRow = { status: string; continued_room_id: string | null };
 type StatusRow = { status: string };
 type PromptPoolRow = { state: string; candidates: unknown };
+const RecentPromptRowsSchema = z.array(z.object({ prompt_id: z.string().nullable() }));
+
+/** How many recent started games per player to avoid repeating questions from. */
+const RECENT_GAME_LIMIT = 5;
 
 const responseHeaders = {
   ...corsHeaders,
@@ -513,6 +518,16 @@ Deno.serve(async (request) => {
 
     if (parsedRequest.data.action === "start") {
       const roomId = parsedRequest.data.roomId;
+      // Prefer questions neither player saw in their last few games. Optional: on error, draw from all.
+      const { data: recent, error: recentError } = await adminClient
+        .rpc("recent_prompt_ids", { p_room_id: roomId, p_game_limit: RECENT_GAME_LIMIT });
+      const recentRows = recentError ? null : RecentPromptRowsSchema.safeParse(recent ?? []);
+      if (!recentRows?.success) {
+        console.warn(JSON.stringify({ requestId, category: "RECENT_PROMPTS_UNAVAILABLE" }));
+      }
+      const avoidIds = recentRows?.success
+        ? recentRows.data.flatMap((row) => (row.prompt_id ? [row.prompt_id] : []))
+        : [];
       let data: StartedRoomRow | null = null;
       // Two tries at most: POOL_CHANGED means candidates became ready after our read, and ready is final.
       for (let attempt = 0; attempt < 2; attempt += 1) {
@@ -529,7 +544,7 @@ Deno.serve(async (request) => {
         const readyCandidates = !poolError && pool?.state === "ready" && Array.isArray(pool.candidates)
           ? pool.candidates
           : [];
-        const selection = selectGamePrompts({ generatedCandidates: readyCandidates, random: secureRandom });
+        const selection = selectGamePrompts({ generatedCandidates: readyCandidates, avoidIds, random: secureRandom });
         const result = await adminClient
           .rpc("start_room", {
             p_profile_id: profile.id,
