@@ -110,7 +110,12 @@ Or:
 
 ## Developer starting points / 开发入口
 
-The repository now contains documentation and tracked scaffold placeholders, **not a runnable application**. No dependencies, backend, database or deployment have been configured. Existing source placeholders export nothing and must be implemented before use.
+The repository contains a runnable React/TypeScript/Vite shell, shared contracts,
+anonymous identity, room creation/joining, game start, immutable private answer
+submission, evaluation, refresh/reconnect synchronization, round continuation,
+and recovery-code identity transfer. Tasks 2.6–2.9 remain pending remote acceptance
+until their migrations and functions are deployed. Records and the integrated
+product UI are not implemented yet.
 
 | Role | Start here | First handoff |
 |---|---|---|
@@ -122,7 +127,130 @@ Read [AGENTS.md](AGENTS.md), [PROJECT.md](docs/PROJECT.md), and [CONTRACTS.md](d
 
 **Start order:** B establishes the runtime and shared contracts → C provides fixtures → A builds the reveal UI while B/C implement services → integrate one real round before expanding.
 
-**Current setup:** there is no package.json yet, so `npm install` / `npm run dev` are not available. B's first task is to configure these in this repository root without overwriting the existing files. Do not create a second nested application.
+### Local development
+
+Requirements: Node.js 20.19 or newer and npm.
+
+```bash
+npm install
+cp .env.example .env.local
+npm run dev
+```
+
+The public Supabase variables may remain empty for the current local shell. An empty value does not represent a successful service connection.
+
+Checks and production build:
+
+```bash
+npm run typecheck
+npm run build
+npm run preview
+```
+
+The default page is the minimal runtime smoke test. Open `/?preview=contracts` for the B-owned local contract preview. This preview validates static local data only; it does not claim that Supabase or AI is connected.
+
+To verify a real Supabase anonymous session, copy `.env.example` to
+`.env.local`, fill in the project URL and publishable key, restart the dev
+server, and open `/?preview=supabase`. The verification is user-triggered and
+only displays a shortened user ID; it never prints session tokens. A successful
+anonymous sign-in does not by itself verify database RLS or controlled writes.
+
+After the `profiles` migration and `identity` Edge Function are deployed, the
+same preview can call `identity/me` and create one profile through
+`identity/create`. The browser has no direct grants on `public.profiles`; all
+access is mediated by the authenticated function. Recovery codes are shown once
+and must not be copied into logs, screenshots, issues, or committed files.
+
+Task 2.1 has a remote acceptance check for two independent anonymous sessions
+using the same nickname. It also recreates one client from the same session
+storage, verifies the stable profile mapping, repeats `identity/create`
+idempotently, and confirms direct browser-equivalent reads are denied:
+
+```bash
+npm run verify:identity
+```
+
+This command uses `.env.local` and creates two test anonymous users and profiles
+in the linked Supabase project; they remain there until test-data cleanup is
+implemented. Generated test records use English-only labels. Its output never
+includes JWTs or recovery codes. Identity recovery and recovery-code rotation
+have a separate task 2.9 check below.
+
+Task 2.2 adds transactional room creation and joining. The host always occupies
+slot A; a row lock plus database uniqueness constraints allow exactly one slot B
+even when two players join concurrently. Creation is idempotent for the same
+profile and request ID, and an existing member can safely repeat `join`.
+
+After deploying migration `202609260002_create_rooms.sql` and the `game` Edge
+Function, run the real concurrency check with:
+
+```bash
+npm run verify:rooms
+```
+
+This check creates one test room and three English-labeled test profiles in the
+linked Supabase project. It verifies idempotent creation, case-insensitive invite
+codes, one successful concurrent join, one `ROOM_FULL` response, idempotent
+rejoin, and denied direct browser reads of `participants`.
+
+Task 2.3 adds transactional game start and controlled snapshots. The host can
+start only after both slots are occupied. One transaction freezes three distinct
+questions from the curated English fallback pool, advances the room to round 1,
+and leaves repeated start requests on the original prompt snapshots.
+
+After deploying migration `202609260003_start_game.sql` and the updated `game`
+Edge Function, run:
+
+```bash
+npm run verify:start
+```
+
+The check verifies that a one-player room cannot start, a non-host cannot start,
+both players receive the same current prompt, repeated start does not redraw it,
+and browser-equivalent access to `rounds` is denied. AI-generated question
+candidates are not connected yet; their absence never blocks this curated
+fallback.
+
+Tasks 2.4 and 2.5 add immutable submissions and pre-reveal data protection.
+Run the remote acceptance check with:
+
+```bash
+npm run verify:submit
+npm run verify:evaluate
+```
+
+The submission test verifies same-answer replay, conflicting-answer rejection,
+phase advancement only after both submissions, snapshots containing only the
+viewer's own answer, member-only reads of public room columns, and denied browser
+access to private room columns, rounds, and submission bodies. The evaluation test
+makes a billable real-provider call and should run only after migration 005 and the
+`evaluate` function are deployed with `LLM_API_KEY` and `LLM_MODEL` configured.
+
+Task 2.7 implements viewer-specific snapshot refresh after Realtime notifications,
+rejects older revisions, refreshes after reconnect/focus, and polls every three
+seconds only while the page is active and Realtime is unavailable. Revision
+ordering has a local test; browser disconnect/reconnect behavior remains a manual
+integration check.
+
+Task 2.8 stores each player's continue choice transactionally. One player waits,
+repeated requests do not advance twice, and the second player advances to the next
+round or finishes round three. Its remote check performs three real model calls:
+
+```bash
+npm run verify:continue
+```
+
+Task 2.9 transfers a profile to a fresh anonymous session, rotates the recovery
+code, invalidates the old auth binding, limits failures by both auth identity and
+hashed request source, and handles replayed request IDs without rotating twice.
+Its remote check intentionally submits one expired code but does not exhaust the
+shared source rate limit:
+
+```bash
+npm run verify:recovery
+```
+
+Dependencies are pinned exactly in `package.json` and `package-lock.json`. Run these commands from the existing repository root; do not create a nested project.
 
 ```text
 Find_Your_Planet/
@@ -134,8 +262,8 @@ Find_Your_Planet/
 │   ├── screens/          A: six screen placeholders
 │   ├── components/       A: four component placeholders
 │   ├── styles/           A: CSS placeholders
-│   ├── services/         B: client placeholders
-│   ├── hooks/            B: session placeholder
+│   ├── services/         B: identity, game and evaluation clients
+│   ├── hooks/            B: snapshot synchronization and reconnect
 │   └── fixtures/         C: sample-data placeholder
 ├── supabase/
 │   ├── migrations/
@@ -153,6 +281,12 @@ Find_Your_Planet/
     └── integration/
 ```
 
-Empty backend/test directories contain `.gitkeep` so they are retained by Git. There are no deployable function entrypoints or migrations yet. Role guides link to the existing checklist task numbers; no tasks were automatically marked complete.
+Unimplemented backend/test directories retain `.gitkeep` placeholders. The
+implemented `identity`, `game`, and `evaluate` functions and their migrations are
+deployable; tasks 2.6–2.9 remain unverified until their remote integration checks
+pass.
+C's evaluation handoff is documented in
+[HANDOFF_C_EVALUATION](docs/HANDOFF_C_EVALUATION.md). Role guides link to the
+existing checklist task numbers; no tasks are automatically marked complete.
 
 The existing repository name `Find_Your_Planet` and English introduction are retained; the current product-planning name is **Find Your Planet**. Do not rename the remote or rewrite the introduction as part of scaffolding.

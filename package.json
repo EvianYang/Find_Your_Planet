@@ -1,0 +1,36 @@
+{
+  "name": "find-your-planet",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "typecheck": "tsc -b",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "verify:identity": "node --env-file=.env.local --test tests/integration/identity.remote.test.mjs",
+    "verify:rooms": "node --env-file=.env.local --test tests/integration/rooms.remote.test.mjs",
+    "verify:start": "node --env-file=.env.local --test tests/integration/start-game.remote.test.mjs",
+    "verify:submit": "node --env-file=.env.local --test tests/integration/submit-protection.remote.test.mjs",
+    "verify:evaluate": "node --env-file=.env.local --test tests/integration/evaluate.remote.test.mjs",
+    "verify:continue": "node --env-file=.env.local --test tests/integration/continue-game.remote.test.mjs",
+    "verify:recovery": "node --env-file=.env.local --test tests/integration/recovery.remote.test.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.117.2",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.4",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "4.7.0",
+    "typescript": "5.9.3",
+    "vite": "6.4.3"
+  }
+}

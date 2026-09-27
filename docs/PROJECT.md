@@ -1,6 +1,6 @@
 # Find Your Planet
 
-**两颗星之间的距离，两颗心之间的距离。**
+**The distance between two stars. The distance between two hearts.**
 
 状态：产品与开发规划、目录骨架已整理，应用尚未实现。版本：2026-09-25。日常进度由 [Notion：Find Your Planet — Development Checklist](https://app.notion.com/p/3e7d830fac0481c8bf0ef203ac15c27e?pvs=204)管理，不能把本文中的计划当成已完成的功能。
 
@@ -29,30 +29,31 @@ Find Your Planet 是一个双人 AI 社交小游戏。两个人回答同样的�
 
 ## 题目：让人跳出现实去联想
 
-题目没有固定类型。可以荒诞、温柔、奇怪，也可以很简单。不局限于超能力、月亮、记忆或任何分类；不要求每道题都有条件反转，也不强制解释“为什么”。只要能打开联想，让人愿意回答。
+题目用英文。核心只有四个字：天马行空。风格不设限，荒诞、温柔、奇怪、好笑、日常都可以，也可以很简单。不要求每道题都有条件反转，也不强制解释“为什么”。每道题都要能调动联想和抽象思维，同时十秒内就能凭直觉开始作答，让人愿意回答。
 
-第一版人工准备约 12 道题，房间等待时尝试生成 2 道 AI 新题。检查后混入本局题池，随机抽三道不重复题。没有必须出现 AI 题的配额；开始时新题未准备好就用人工题，不耽误开局。开局后题目不再替换。
+第一版人工准备 39 道题：13 个方向各 3 道。房间等待时尝试生成 2 道 AI 新题，检查后混入本局题池，随机抽三道不重复题。没有必须出现 AI 题的配额；开始时新题未准备好就用人工题，不耽误开局。开局后题目不再替换。
 
 首批人工题目草案（供 A/C 试玩后调整，不是题型限制）：
 
-1. 如果世界上可以多一种颜色，你希望它出现在什么地方？
-2. 你能让任何东西向左移动两厘米，每天一次。你准备先做什么？
-3. 一段沉默可以装进行李箱。你会把它带去哪里？
-4. 月亮突然显示“存储空间不足”。你觉得里面存了什么？
-5. 你家门外多出一条昨天不存在的路。它通向哪里？
-6. 如果能给宇宙补上一条说明书，你会写什么？
-7. 明天醒来，所有人的影子都可以请一天假。你的影子会去哪里？
-8. 你收到一张来自未来的收据，上面只有一件商品。是什么？
-9. 如果某一种声音可以长成植物，你想种什么？
-10. 世界忽然多出一个只属于你的节日。人们在那天会做什么？
-11. 你能把一扇窗开在任何东西上。你会开在哪里？
-12. 一只从未见过人类的小动物误把你当作一种天气。它会怎样描述你？
+1. If the world could have one more color, where would you want it to appear?
+2. Once a day, you can move anything two centimeters to the left. What would you move first?
+3. A moment of silence can fit inside a suitcase. Where would you take it?
+4. The Moon suddenly displays “Storage full.” What do you think is stored inside?
+5. A road that did not exist yesterday appears outside your home. Where does it lead?
+6. If you could add one instruction to the universe’s manual, what would it say?
+7. Tomorrow, everyone’s shadow can take the day off. Where would your shadow go?
+8. You receive a receipt from the future with only one item on it. What is it?
+9. If a sound could grow into a plant, which sound would you plant?
+10. The world suddenly gains a holiday that belongs only to you. What does everyone do that day?
+11. You can place a window on anything. Where would you put it?
+12. An animal that has never seen a human mistakes you for a kind of weather. How would it describe you?
+本文档刻意不放示例题，避免人工出题和 AI 生成都往同一种意象和句式上靠。方向、出题标准、反例和生成规则见 [START_AI.md 的出题规则](START_AI.md#出题规则)。
 
 ## AI 为什么不可替代
 
 同一个词可能藏着不同的思路，不同的答案也可能沿着相似的联想路径。
 
-例如“移动两厘米”：一个人把雨伞挪过去替朋友挡雨，另一个把杯子挪回桌面防止摔碎。对象不同，但都用微小改变阻止一件不好的事。
+例如题目是“每天一次，你能让任何东西向左移动两厘米”：一个人把雨伞挪过去替朋友挡雨，另一个把杯子挪回桌面防止摔碎。对象不同，但都用微小改变阻止一件不好的事。
 
 AI 解释共同意象、联想方式、表达出来的目的或感受。只根据文本，不强迫每个脑洞都有价值观或心理意义，不因答案短或古怪就扣分。证据不足可以说“不知道”。
 
