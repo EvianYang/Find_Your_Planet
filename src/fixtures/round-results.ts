@@ -2,7 +2,7 @@
 import { z } from "zod";
 import { PromptSchema, PlayerSchema, AnswerSchema } from "../../supabase/functions/_shared/contracts/game.ts";
 import { EvaluateResponseSchema } from "../../supabase/functions/_shared/contracts/evaluate.ts";
-import type { DimensionResult, RoundResult } from "../../supabase/functions/_shared/contracts/evaluation.ts";
+import type { DimensionResult, RoundResultV1 } from "../../supabase/functions/_shared/contracts/evaluation.ts";
 
 const DemoRoundSchema = z.object({
   isDemo: z.literal(true),
@@ -24,7 +24,7 @@ const dimension = (similarity: DimensionResult["similarity"], a: string, b: stri
   similarity, aEvidence: a ? [a] : [], bEvidence: b ? [b] : [], explanation,
 });
 const ready = (scenario: "close" | "medium" | "far" | "partial" | "insufficient", label: string,
-  answers: { a: string; b: string }, result: Omit<RoundResult, "rubricVersion" | "modelId">,
+  answers: { a: string; b: string }, result: Omit<RoundResultV1, "rubricVersion" | "modelId">,
 ): DemoRoundFixture => DemoRoundSchema.parse({
   isDemo: true, scenario, label: `Demo sample · ${label}`, prompt, players, answers,
   response: { data: { status: "ready", result: { ...result, rubricVersion: "fmp-v1", modelId: "demo-handwritten-not-a-model" } },

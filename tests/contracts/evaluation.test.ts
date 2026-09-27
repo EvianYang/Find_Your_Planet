@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { INTERPRETATION_MAX, ModelComparisonSchema, RoundResultSchema, createModelComparisonSchema } from "../../supabase/functions/_shared/contracts/evaluation.ts";
+import { INTERPRETATION_MAX, ModelComparisonSchema, RoundResultSchema, calculateFmpV2, createModelComparisonSchema } from "../../supabase/functions/_shared/contracts/evaluation.ts";
+import { modelOutput, profile } from "../ai/fmp-v2-helpers.ts";
 import { GameRequestSchema, GameSnapshotSchema } from "../../supabase/functions/_shared/contracts/game.ts";
 import { EvaluateResponseSchema, ComparisonInputSchema } from "../../supabase/functions/_shared/contracts/evaluate.ts";
 import { IdentityRequestSchema } from "../../supabase/functions/_shared/contracts/identity.ts";
@@ -33,13 +34,33 @@ test("coverage boundary and fmp-v1 distance are enforced", () => {
   assert.equal(RoundResultSchema.safeParse({ ...enough, dimensions: { ...enough.dimensions, association: { ...scored, bEvidence: [] } } }).success, false);
 });
 
+const left = profile(1, [-1, 1, -1, -1], [0, 0, 1, 2]);
+const right = profile(1, [-2, -1, -1, -1], [0, 0, 0, 3]);
+
 test("exact quotes belong to the correct answer; Unicode limits use code points", () => {
-  const d = { similarity: 4, leftEvidence: ["umbrella"], rightEvidence: ["cup"], explanation: "🧩".repeat(INTERPRETATION_MAX) };
-  const model = { status: "ok", dimensions: { imagery: d, association: d, orientation: d }, summary: "Explanation", commonality: [], divergence: [], unknowns: [] };
+  const model = { ...modelOutput({ imagery: 1, focus: 3 }, left, right, { left: ["umbrella"], right: ["cup"] }), summary: "🧩".repeat(INTERPRETATION_MAX) };
   assert.ok(createModelComparisonSchema("Move the umbrella", "Move the cup").safeParse(model).success);
   assert.equal(createModelComparisonSchema("Move the cup", "Move the umbrella").safeParse(model).success, false);
   assert.equal(ModelComparisonSchema.safeParse({ ...model, summary: "🧩".repeat(INTERPRETATION_MAX + 1) }).success, false);
-  assert.equal(ModelComparisonSchema.safeParse({ ...model, dimensions: { ...model.dimensions, imagery: { ...d, similarity: 2.5 } } }).success, false);
+  assert.equal(ModelComparisonSchema.safeParse({ ...model, overlap: { imagery: 2.5, focus: 3 } }).success, false);
+});
+
+test("fmp-v2 results carry profiles for both slots and must match the server formula", () => {
+  const scored = calculateFmpV2({ imagery: 1, focus: 3 }, left, right);
+  const v2 = {
+    status: "ok", overlap: { imagery: 1, focus: 3 }, a: left, b: right, aEvidence: ["umbrella"], bEvidence: ["cup"],
+    summary: "Fine print on convenience.", commonality: [], divergence: [], unknowns: [],
+    ...scored, rubricVersion: "fmp-v2", modelId: "test-only",
+  };
+  assert.deepEqual(scored, { coverage: 1, distance: 224 });
+  assert.ok(RoundResultSchema.safeParse(v2).success);
+  for (const invalid of [{ ...v2, distance: 225 }, { ...v2, distance: null }, { ...v2, coverage: 0.9 },
+    { ...v2, status: "insufficient" }, { ...v2, aEvidence: [] }, { ...v2, rubricVersion: "fmp-v1" },
+    { ...v2, dimensions: unknown.dimensions }, { ...v2, leftProfile: left }]) {
+    assert.equal(RoundResultSchema.safeParse(invalid).success, false);
+  }
+  // A v1 result with v2 fields, or the other way round, is not a valid mix.
+  assert.equal(RoundResultSchema.safeParse({ ...unknown, overlap: { imagery: null, focus: null } }).success, false);
 });
 
 test("public request schemas reject extra/private scoring fields and bad inputs", () => {

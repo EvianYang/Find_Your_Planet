@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { ComparisonInputSchema } from "../contracts/evaluate.ts";
-import { ModelComparisonSchema, RoundResultSchema, createModelComparisonSchema } from "../contracts/evaluation.ts";
-import type { ModelDimension, RoundResult } from "../contracts/evaluation.ts";
-import { calculateRoundDistance } from "./distance.ts";
+import { ModelComparisonSchema, RoundResultV2Schema, createModelComparisonSchema } from "../contracts/evaluation.ts";
+import type { RoundResult } from "../contracts/evaluation.ts";
+import { calculateFmpV2 } from "./distance.ts";
 import { COMPARISON_SYSTEM_PROMPT } from "./prompt.ts";
 
 export const EVALUATION_TIMEOUT_MS = 20_000;
@@ -82,21 +82,22 @@ export async function evaluatePair(input: unknown, provider: ComparisonProvider)
   const grounded = createModelComparisonSchema(left, right).safeParse(raw);
   if (!grounded.success) throw new EvaluationError("INVALID_EVIDENCE");
   const comparison = grounded.data;
-  const mapDimension = (d: ModelDimension) => ({
-    similarity: d.similarity,
-    aEvidence: aIsLeft ? d.leftEvidence : d.rightEvidence,
-    bEvidence: aIsLeft ? d.rightEvidence : d.leftEvidence,
-    explanation: d.explanation,
-  });
-  return RoundResultSchema.parse({
-    ...comparison,
-    dimensions: {
-      imagery: mapDimension(comparison.dimensions.imagery),
-      association: mapDimension(comparison.dimensions.association),
-      orientation: mapDimension(comparison.dimensions.orientation),
-    },
-    ...calculateRoundDistance(comparison.dimensions),
-    rubricVersion: "fmp-v1",
+  // Map canonical left/right back to player slots A/B.
+  const a = aIsLeft ? comparison.leftProfile : comparison.rightProfile;
+  const b = aIsLeft ? comparison.rightProfile : comparison.leftProfile;
+  return RoundResultV2Schema.parse({
+    status: comparison.status,
+    overlap: comparison.overlap,
+    a,
+    b,
+    aEvidence: aIsLeft ? comparison.leftEvidence : comparison.rightEvidence,
+    bEvidence: aIsLeft ? comparison.rightEvidence : comparison.leftEvidence,
+    summary: comparison.summary,
+    commonality: comparison.commonality,
+    divergence: comparison.divergence,
+    unknowns: comparison.unknowns,
+    ...calculateFmpV2(comparison.overlap, a, b),
+    rubricVersion: "fmp-v2",
     modelId: modelId.data,
   });
 }

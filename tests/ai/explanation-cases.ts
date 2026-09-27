@@ -47,6 +47,17 @@ export const EXPLANATION_CASES = [
     review: "Association and orientation stay null in the scores. The reading still offers a brief, playful take on the choices (belonging and warmth versus quiet focus, for example) without building a story or restating 'you both chose a place'. The summary is one headline.",
   },
   {
+    id: "same-pick-in-a-choice-question",
+    input: {
+      prompt: "Would you rather have a soundtrack everyone can hear, or a diary that writes itself only you can read?",
+      answers: {
+        a: "The diary. Having a secret that nobody else knows about sounds thrilling.",
+        b: "The diary, because my thoughts disappear so fast and I want to catch them before they're gone.",
+      },
+    },
+    review: "Commonality must not be empty: the shared pick (a private channel over a public one) is a real meeting point. Divergence explains why each picked it (the thrill of a secret versus catching fleeting thoughts).",
+  },
+  {
     id: "non-english-answer",
     input: {
       prompt: "Scientists prove one legendary creature was real all along. Which one, and where has it been hiding?",

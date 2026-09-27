@@ -24,10 +24,9 @@ try {
     const started = Date.now();
     const pair = swapped ? { a: answers.b, b: answers.a } : answers;
     const result = await evaluatePair({ prompt: "You can travel through time once. Would you go, and to which year?", answers: pair }, provider);
-    for (const dim of Object.values(result.dimensions)) {
-      for (const quote of dim.aEvidence) assert.ok(pair.a.includes(quote));
-      for (const quote of dim.bEvidence) assert.ok(pair.b.includes(quote));
-    }
+    if (result.rubricVersion !== "fmp-v2") throw new Error("Expected an fmp-v2 result");
+    for (const quote of result.aEvidence) assert.ok(pair.a.includes(quote));
+    for (const quote of result.bEvidence) assert.ok(pair.b.includes(quote));
     rows.push({ swapped, elapsedMs: Date.now() - started, status: result.status, distance: result.distance, coverage: result.coverage, evidenceValid: true });
   }
   console.log(JSON.stringify({ model: provider.modelId, checks: rows }));

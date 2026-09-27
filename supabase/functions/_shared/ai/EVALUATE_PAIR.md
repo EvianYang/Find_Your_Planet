@@ -166,3 +166,15 @@ A 可审核解释呈现和 null 状态；B 仍需完成真实房间调用、租�
 - 示例换成一组虚构的正反对照（删除一项发明：社交媒体 vs 塑料袋）。
 - 长度：summary 60 字符内的一句标题；commonality / divergence / unknowns 参考 160 字符内；`LIST_ITEM_MAX` 硬上限从 160 放宽到 240。部署时仍须先部署 `game` 与网页，再部署 `evaluate`。
 - 推理强度仍为 medium。若 gpt-5.4-mini 仍停留在复述，下一步考虑 high 或更强的模型。
+
+## comparison-v7 与计分规则 fmp-v2（2026-09-27，待真实模型验收）
+
+试玩时经常出现同样的距离。原因：fmp-v1 只有三维、每维 5 档，满覆盖时只能算出 17 种距离（62.5 的倍数），模型又爱给中间分 2。fmp-v2 改为：
+
+- 模型给两项重合度（imagery、focus，0–4），再对每份答案**分别**画像：leap（0–4）、思维方式四条轴（scope / basis / direction / closure，−2…+2，借用荣格八维 / MBTI 的维度但用日常说法）、价值倾向四组（openness / enhancement / conservation / transcendence，0–3，参照 Schwartz 基本价值理论）。
+- 服务端用 `calculateFmpV2` 把各项差距换成 0–1 并加权：联想 0.30、思维方式 0.35、价值倾向 0.35；null 不计入；coverage < 0.5 无距离。分别画像再比较差距，天然对称，也避开了“直接判断像不像”时往中间靠的倾向。
+- 同样的随机分数下，fmp-v2 在 2 万组组合里算出 488 种不同距离，最常见的值只占 0.7%。
+- 提示词：每个子项写明刻度与例子（“删掉一项发明：社交媒体 vs 塑料袋”，示例距离 224，测试中逐项核对）；要求各自画像时不看另一份答案；null 表示看不出、不是中间分；解读要围绕画像里最接近和最远的地方写，使文字和数字一致。
+- 去掉每维 explanation（玩家看不到），证据改为每份答案 1–2 条原文，输出预算留给推理。
+- `RoundResultSchema` 同时接受 fmp-v1 与 fmp-v2；已保存的 fmp-v1 结果不重算。记录结构允许 `fmp-v2`。演示 fixture 仍是 fmp-v1。
+- 部署：先 `game` 与网页（能读取 fmp-v2），最后 `evaluate`。

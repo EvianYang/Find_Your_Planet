@@ -20,12 +20,11 @@ test("adapter sends strict structure, cancellation and no storage in one request
     for (const key of ["commonality", "divergence", "unknowns"]) {
       assert.equal(schema.properties[key].items.maxLength, LIST_ITEM_MAX);
     }
-    for (const dimension of ["imagery", "association", "orientation"]) {
-      const fields = schema.properties.dimensions.properties[dimension].properties;
-      assert.equal(fields.explanation.maxLength, INTERPRETATION_MAX);
-      assert.equal(fields.leftEvidence.items.maxLength, EVIDENCE_MAX);
-      assert.equal(fields.rightEvidence.items.maxLength, EVIDENCE_MAX);
+    for (const key of ["leftEvidence", "rightEvidence"]) {
+      assert.equal(schema.properties[key].items.maxLength, EVIDENCE_MAX);
     }
+    assert.deepEqual(Object.keys(schema.properties.leftProfile.properties).sort(), ["leap", "thinking", "values"]);
+    assert.equal(schema.additionalProperties, false);
     assert.deepEqual(request.jsonSchema, z.toJSONSchema(ModelComparisonSchema));
     return Response.json({ status: "completed", output: [{ type: "message", content: [{ type: "output_text", text: '{"ok":true}' }] }] });
   });
