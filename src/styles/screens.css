@@ -11,7 +11,9 @@
 }
 .fyp-screen :focus-visible { outline: 2px solid var(--fyp-ink); outline-offset: 3px; border-radius: 10px; }
 .fyp-screen .fyp-sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-.sc-sheet { padding: 22px 20px 32px; display: flex; flex-direction: column; gap: 20px; flex: 1; }
+.sc-sheet { padding: 22px 20px 32px; display: flex; flex-direction: column; gap: 20px; flex: 1; animation: fyp-sc-enter 220ms var(--fyp-ease-out) both; }
+/* A new phase arrives softly instead of cutting in; opacity and a small rise only, so focus still works at once. */
+@keyframes fyp-sc-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 .sc-brand { display: flex; flex-direction: column; gap: 6px; }
 .sc-brand h1 { margin: 0; font-family: var(--fyp-font-display); font-size: 34px; line-height: 38px; font-weight: 600; letter-spacing: -0.02em; }
 .sc-brand h1:focus { outline: none; }
@@ -186,4 +188,5 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .sc-spin { animation: none; border-right-color: currentColor; opacity: 0.6; }
+  .sc-sheet { animation: none; }
 }

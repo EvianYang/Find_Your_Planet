@@ -12,6 +12,9 @@
 .fyp-reveal .fyp-sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .fyp-reveal :focus-visible { outline: 2px solid var(--fyp-ink); outline-offset: 3px; border-radius: 10px; }
 .rv-stage { position: relative; }
+/* Same soft entrance as the other screens, except while the reveal plays its own choreography. */
+.fyp-reveal--enter .rv-sheet { animation: fyp-rv-enter 220ms var(--fyp-ease-out) both; }
+@keyframes fyp-rv-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 .rv-skip {
   position: absolute;
   top: 10px;
@@ -132,6 +135,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .fyp-reveal--play *,
+  .fyp-reveal--enter .rv-sheet,
   .rv-spin { animation: none !important; }
   .rv-spin { border-right-color: currentColor; opacity: 0.6; }
 }

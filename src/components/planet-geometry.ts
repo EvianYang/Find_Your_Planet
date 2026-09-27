@@ -42,6 +42,28 @@ export function unknownKind(result: Pick<RoundResult, "distance" | "status">): U
 
 const round1 = (value: number) => Math.round(value * 10) / 10;
 
+/** The moon in the top-right corner of the sky; it waxes as rounds are completed. */
+export const MOON = { cx: 356, cy: 30.5, r: 9.5 } as const;
+const MOON_LIT_BY_COMPLETED_ROUNDS = [0.12, 0.4, 0.7, 1] as const;
+
+/** Thin crescent before the game, a little fuller after each round, full once all three are done. */
+export function moonLitForRounds(completed: number): number {
+  const index = Math.min(3, Math.max(0, Math.floor(completed)));
+  return MOON_LIT_BY_COMPLETED_ROUNDS[index];
+}
+
+/**
+ * Lit part of a waxing moon (right side lit), from 0 (new) to 1 (full). The outer edge is the right half of the
+ * disk; the terminator is a half-ellipse with rx = r·|1 − 2·lit|, bulging right for a crescent and left for a gibbous moon.
+ */
+export function moonPath(lit: number): string {
+  const k = Math.min(1, Math.max(0, lit));
+  const { cx, cy, r } = MOON;
+  const rx = round1(r * Math.abs(1 - 2 * k));
+  const sweep = k < 0.5 ? 0 : 1;
+  return `M${cx} ${cy - r}A${r} ${r} 0 0 1 ${cx} ${cy + r}A${rx} ${r} 0 0 ${sweep} ${cx} ${cy - r}Z`;
+}
+
 /** Closed hand-drawn blob through jittered points on an ellipse (Catmull-Rom to cubic Bézier). */
 export function blobPath(
   radius: number,

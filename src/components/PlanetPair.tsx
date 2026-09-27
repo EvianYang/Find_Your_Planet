@@ -7,8 +7,11 @@ import "../styles/planet-pair.css";
 import { Asteroid } from "./Asteroid.tsx";
 import {
   CANVAS,
+  MOON,
   REST_POSITION,
   UNCHARTED_PATH,
+  moonLitForRounds,
+  moonPath,
   placedPosition,
   unknownKind,
   type PairPosition,
@@ -31,6 +34,10 @@ export type PlanetPairProps = {
   landDelayMs?: number;
   /** Lobby: the second place can still be empty. Defaults to both present. */
   present?: SlotFlags;
+  /** Lobby: a player who just joined fades in; leave unset on first render and refresh. */
+  arriving?: SlotFlags;
+  /** Moon phase, 0 new to 1 full (see moonLitForRounds). With `from` and `play`, it waxes during the landing. */
+  moon?: { lit: number; from?: number };
   /** Overrides the default accessible description (for example for the overall result). */
   ariaLabel?: string;
 };
@@ -75,6 +82,8 @@ export function PlanetPair({
   play = false,
   landDelayMs = 0,
   present = { a: true, b: true },
+  arriving = NONE,
+  moon,
   ariaLabel,
 }: PlanetPairProps) {
   const id = `fyp-pp${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
@@ -86,6 +95,9 @@ export function PlanetPair({
   const e2 = target.b.x - CANVAS.radius;
   const mid = (e1 + e2) / 2;
   const y = CANVAS.measureY;
+  const moonLit = moon?.lit ?? moonLitForRounds(0);
+  // Only a playing reveal shows the old phase handing over to the new one; otherwise the moon is already settled.
+  const moonFrom = playing && moon?.from !== undefined && moon.from !== moonLit ? moon.from : null;
 
   const emptyPlace = (key: "a" | "b") => (
     <g transform={`translate(${REST_POSITION[key].x} ${REST_POSITION[key].y})`}>
@@ -104,12 +116,16 @@ export function PlanetPair({
       <g className={`pp-x pp-x--${key}`} style={vars}>
         <g className="pp-y">
           <g className={`pp-float pp-float--${key}`}>
+            <g className={arriving[key] ? "pp-arrive" : undefined}>
             {unknown ? <circle className="pp-ring" r="36" fill="none" stroke={color} strokeOpacity="0.75" strokeWidth="1.2" strokeDasharray="3 5" /> : null}
             <Asteroid slot={slot} moonletClassName="pp-moonlet" />
             {showEnvelope ? (
-              <g className={playing ? "pp-env pp-env--opening" : "pp-env"} transform="translate(0 -44)">
-                <rect x="-8.5" y="-6" width="17" height="12" rx="2.4" fill="#0b1020" stroke={color} strokeWidth="1.4" />
-                <path d="M-7.6 -4.8 0 1 7.6 -4.8" fill="none" stroke={color} strokeWidth="1.4" strokeLinejoin="round" />
+              // The position lives on the outer group so CSS animations on the inner one never replace it.
+              <g transform="translate(0 -44)">
+                <g className={playing ? "pp-env pp-env--opening" : "pp-env"}>
+                  <rect x="-8.5" y="-6" width="17" height="12" rx="2.4" fill="#0b1020" stroke={color} strokeWidth="1.4" />
+                  <path d="M-7.6 -4.8 0 1 7.6 -4.8" fill="none" stroke={color} strokeWidth="1.4" strokeLinejoin="round" />
+                </g>
               </g>
             ) : null}
             {ready[key] ? (
@@ -120,6 +136,7 @@ export function PlanetPair({
                 </g>
               </g>
             ) : null}
+            </g>
           </g>
         </g>
       </g>
@@ -140,6 +157,11 @@ export function PlanetPair({
           <pattern id={`${id}-cross`} width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(20)">
             <path d="M0 0L5 5M5 0L0 5" stroke="#f7f4ee" strokeWidth="0.5" strokeOpacity="0.28" />
           </pattern>
+          <radialGradient id={`${id}-glow`}>
+            <stop offset="0" stopColor="#f7f4ee" stopOpacity="0.32" />
+            <stop offset="0.45" stopColor="#f7f4ee" stopOpacity="0.1" />
+            <stop offset="1" stopColor="#f7f4ee" stopOpacity="0" />
+          </radialGradient>
         </defs>
         <g aria-hidden="true">
           {STARS.map((s, i) => (
@@ -154,7 +176,15 @@ export function PlanetPair({
               <path d="M84 150h5M86.5 147.5v5" />
               <path d="M262 22h5M264.5 19.5v5" />
             </g>
-            <path d="M356 21A9.5 9.5 0 1 0 356 40A7 9.5 0 1 1 356 21Z" fill="#f7f4ee" fillOpacity="0.72" strokeOpacity="0.5" strokeWidth="0.8" filter={`url(#${id}-ink)`} />
+          </g>
+          {moonLit >= 1 ? <circle className="pp-moon-glow" cx={MOON.cx} cy={MOON.cy} r={MOON.r * 2.6} fill={`url(#${id}-glow)`} /> : null}
+          <g className="pp-moon" stroke="#f7f4ee" filter={`url(#${id}-ink)`}>
+            {/* Earthshine: the whole disk stays faintly visible so the phase reads as part of a moon. */}
+            <circle cx={MOON.cx} cy={MOON.cy} r={MOON.r} fill="#f7f4ee" fillOpacity="0.07" strokeOpacity="0.2" strokeWidth="0.6" />
+            {moonFrom !== null ? (
+              <path className="pp-moon-from" d={moonPath(moonFrom)} fill="#f7f4ee" fillOpacity="0.72" strokeOpacity="0.5" strokeWidth="0.8" />
+            ) : null}
+            <path className={moonFrom !== null ? "pp-moon-to" : undefined} d={moonPath(moonLit)} fill="#f7f4ee" fillOpacity="0.72" strokeOpacity="0.5" strokeWidth="0.8" />
           </g>
         </g>
 

@@ -28,6 +28,8 @@ export function LobbyScreen({ joinCode, players, viewerSlot, onStart }: LobbyScr
   const { message, copy } = useCopy();
   const a = players.find((p) => p.slot === "A");
   const b = players.find((p) => p.slot === "B");
+  // Only a partner who joins while this screen is open gets the arrival animation, not one already here on load.
+  const [partnerAtMount] = useState(Boolean(b));
   const isHost = viewerSlot === "A";
   const canStart = isHost && Boolean(a && b);
 
@@ -63,7 +65,12 @@ export function LobbyScreen({ joinCode, players, viewerSlot, onStart }: LobbyScr
 
   return (
     <section className="fyp-screen" lang="en" aria-labelledby={`${id}-title`}>
-      <PlanetPair mode="resting" nicknames={{ A: a?.nickname ?? "", B: b?.nickname ?? "" }} present={{ a: Boolean(a), b: Boolean(b) }} />
+      <PlanetPair
+        mode="resting"
+        nicknames={{ A: a?.nickname ?? "", B: b?.nickname ?? "" }}
+        present={{ a: Boolean(a), b: Boolean(b) }}
+        arriving={{ a: false, b: Boolean(b) && !partnerAtMount }}
+      />
       <div className="sc-sheet">
         <h1 className="sc-eyebrow" id={`${id}-title`}>Room</h1>
         {joinCode ? (

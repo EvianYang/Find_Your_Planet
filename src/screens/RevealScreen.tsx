@@ -7,7 +7,7 @@ import "../styles/reveal.css";
 import { AnswerCard } from "../components/AnswerCard.tsx";
 import { PlanetPair } from "../components/PlanetPair.tsx";
 import { errorCopy } from "../components/error-copy.ts";
-import { unknownKind } from "../components/planet-geometry.ts";
+import { moonLitForRounds, unknownKind } from "../components/planet-geometry.ts";
 
 type Player = GameSnapshot["players"][number];
 type ContinuedFlags = GameSnapshot["continued"];
@@ -128,6 +128,8 @@ function RevealView({
   const revealed = status.kind === "revealed" ? status.round : null;
   const reduced = prefersReducedMotion();
   const [playing, setPlaying] = useState(() => revealed !== null && animate && !reduced);
+  // Decided once per mount: the soft entrance is only for views that are not about to play the reveal.
+  const [softEntrance] = useState(() => !playing);
   const [stagePlays, setStagePlays] = useState(true);
   const [announcement, setAnnouncement] = useState("");
   const [continuing, setContinuing] = useState(false);
@@ -198,6 +200,7 @@ function RevealView({
   const kind = revealed ? unknownKind(revealed.result) : null;
   const className = [
     "fyp-reveal",
+    softEntrance ? "fyp-reveal--enter" : "",
     playing ? "fyp-reveal--play" : "",
     revealed && animate && reduced ? "fyp-reveal--fade" : "",
   ].filter(Boolean).join(" ");
@@ -225,6 +228,10 @@ function RevealView({
           ready={revealed ? continued : undefined}
           play={playing && stagePlays}
           landDelayMs={LAND_DELAY_MS}
+          // The moon grows one step when this round is revealed.
+          moon={revealed
+            ? { lit: moonLitForRounds(roundIndex), from: moonLitForRounds(roundIndex - 1) }
+            : { lit: moonLitForRounds(roundIndex - 1) }}
         />
         {playing ? (
           <button className="rv-skip" type="button" onClick={() => finish(true)}>
