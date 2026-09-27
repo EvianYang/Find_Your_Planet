@@ -156,7 +156,7 @@ Supabase
 - **Race-safe rounds.** Starting, submitting, evaluating and continuing are single database transactions with row locks, so two phones pressing buttons at once cannot double-advance a round. Evaluation runs under a lease, with one automatic retry and two player retries.
 - **Privacy.** Logs never contain answers, quotes, recovery codes or tokens. The model sees only the question and the two answers.
 
-The full rules live in [CONTRACTS.md](docs/CONTRACTS.md): states and endpoints (sections 3–6), the scoring rubric (section 7) and permissions.
+The full rules live in [CONTRACTS](docs/CONTRACTS.en.md): states, data and endpoints (sections 2–6), the scoring rubric (section 7), and concurrency and permissions (section 8).
 
 ## Run it locally
 
@@ -225,7 +225,7 @@ These run against the project in `.env.local` and create throwaway test identiti
 ```text
 Find_Your_Planet/
 ├── AGENTS.md                 rules for everyone working in the repo
-├── docs/                     PROJECT, CONTRACTS and the role guides
+├── docs/                     PROJECT and CONTRACTS (English in *.en.md), role guides
 ├── src/
 │   ├── App.tsx, GameApp.tsx  routes and the player flow
 │   ├── screens/              welcome, lobby, answer, reveal, result, records (+ demos)
@@ -253,6 +253,6 @@ Find_Your_Planet/
 | B — Backend & integration | Rooms, sync, identity, deployment | [START_BACKEND](docs/START_BACKEND.md) |
 | C — AI & questions | Questions, prompts, scoring and evaluation tests | [START_AI](docs/START_AI.md) |
 
-Read [AGENTS.md](AGENTS.md), [PROJECT.md](docs/PROJECT.md) and [CONTRACTS.md](docs/CONTRACTS.md) before changing code. Progress is tracked in the [Notion Development Checklist](https://app.notion.com/p/3e7d830fac0481c8bf0ef203ac15c27e?pvs=204).
+Read [AGENTS.md](AGENTS.md), [PROJECT](docs/PROJECT.en.md) and [CONTRACTS](docs/CONTRACTS.en.md) before changing code. PROJECT and CONTRACTS have English editions next to the Chinese originals, which are the copies the team edits; AGENTS.md and the START guides are in Chinese. Progress is tracked in the [Notion Development Checklist](https://app.notion.com/p/3e7d830fac0481c8bf0ef203ac15c27e?pvs=204).
 
 The repository name `Find_Your_Planet` and the English introduction above are kept as the team wrote them.

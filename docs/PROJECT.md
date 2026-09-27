@@ -2,7 +2,7 @@
 
 **The distance between two stars. The distance between two hearts.**
 
-状态：产品与开发规划、目录骨架已整理，应用尚未实现。版本：2026-09-25。日常进度由 [Notion：Find Your Planet — Development Checklist](https://app.notion.com/p/3e7d830fac0481c8bf0ef203ac15c27e?pvs=204)管理，不能把本文中的计划当成已完成的功能。
+状态（2026-09-27）：本文是产品规划。游戏本体已实现、可以试玩，当前版本实际有哪些功能见 README 的 [What's in this build](../README.md#whats-in-this-build)；保存结果与个人排名尚未实现（以后再做）；AI 新题已在 `production` 分支完成、尚未测试。英文版见 [PROJECT.en.md](PROJECT.en.md)。日常进度由 [Notion：Find Your Planet — Development Checklist](https://app.notion.com/p/3e7d830fac0481c8bf0ef203ac15c27e?pvs=204)管理，不能把本文中的计划当成已完成的功能。
 
 ## 我们在做什么
 
@@ -47,7 +47,7 @@ Find Your Planet 是一个双人 AI 社交小游戏。两个人回答同样的�
 10. The world suddenly gains a holiday that belongs only to you. What does everyone do that day?
 11. You can place a window on anything. Where would you put it?
 12. An animal that has never seen a human mistakes you for a kind of weather. How would it describe you?
-本文档刻意不放示例题，避免人工出题和 AI 生成都往同一种意象和句式上靠。方向、出题标准、反例和生成规则见 [START_AI.md 的出题规则](START_AI.md#出题规则)。
+以上是早期草案，不是现行题库，也不是出题模板：新题不要照搬它们的意象和句式。现行 45 道题见 `supabase/functions/_shared/content/prompts.ts`。方向、出题标准、反例和生成规则见 [START_AI.md 的出题规则](START_AI.md#出题规则)。
 
 ## AI 为什么不可替代
 
@@ -99,4 +99,4 @@ P0：双人房间、三轮问答、AI 比较、距离动画、总结、独立保
 - [AGENTS.md](../AGENTS.md)：修改范围和交付规则。
 - [Notion：Find Your Planet — Development Checklist](https://app.notion.com/p/3e7d830fac0481c8bf0ef203ac15c27e?pvs=204)：任务与验收的唯一日常进度入口。
 
-本文中的初始题目、数值阈值和视觉参数是开发基线，未宣称经过实测。现阶段只有目录与明确标记的代码占位，没有可运行应用、数据库、部署链接或已验证的功能。实际仓库目录保留团队已有的 Find_Your_Planet，不因产品名称重命名。
+本文中的初始题目、数值阈值和视觉参数是开发基线，未宣称经过实测。实际仓库目录保留团队已有的 Find_Your_Planet，不因产品名称重命名。

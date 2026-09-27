@@ -1,6 +1,6 @@
 # Find Your Planet — CONTRACTS
 
-版本 fmp-v2 · 2026-09-27（计分规则见第 7 节）。此文件是待实现约定，不是已存在的 API。目录中的空模块仅用于分工定位，不代表接口已经实现。产品意图见 [PROJECT.md](PROJECT.md)，日常任务见 [Notion checklist](https://app.notion.com/p/3e7d830fac0481c8bf0ef203ac15c27e?pvs=204)。若实现需要改变行为，先同步负责人并更新本文件，不各自发明接口。
+版本 fmp-v2 · 2026-09-27（计分规则见第 7 节）。main 上已实现：身份与找回码（§4）、房间与游戏流程（§2、§5）、评估与计分（§7）、并发、同步与权限（§8）。尚未实现：AI 新题生成（prepare_prompts，§6；已在 production 分支完成、尚未测试）、收藏与排名（records/*、saved_records，§3、§5、§9；以后再做）、每小时清理任务（§9）。英文版见 [CONTRACTS.en.md](CONTRACTS.en.md)。产品意图见 [PROJECT.md](PROJECT.md)，日常任务见 [Notion checklist](https://app.notion.com/p/3e7d830fac0481c8bf0ef203ac15c27e?pvs=204)。若实现需要改变行为，先同步负责人并更新本文件，不各自发明接口。
 
 ## 1. 技术与归属
 
