@@ -108,26 +108,57 @@ Or:
 
 ---
 
-## Developer starting points / 开发入口
+## What's in this build
 
-The repository contains a runnable React/TypeScript/Vite shell, shared contracts,
-anonymous identity, room creation/joining, game start, immutable private answer
-submission, evaluation, refresh/reconnect synchronization, round continuation,
-and recovery-code identity transfer. Tasks 2.6–2.9 remain pending remote acceptance
-until their migrations and functions are deployed. Records and the integrated
-product UI are not implemented yet.
+A complete two-player game you can play on two phones:
 
-| Role | Start here | First handoff |
-|---|---|---|
-| A — Frontend & experience | [START_FRONTEND](docs/START_FRONTEND.md) | Fixture-driven reveal and planet distance UI |
-| B — Backend & integration | [START_BACKEND](docs/START_BACKEND.md) | Bootstrap Vite/React, shared contracts, then two-player room |
-| C — AI & questions | [START_AI](docs/START_AI.md) | Question bank, evaluation schema and validated fixtures |
+- **Rooms.** Create a room and share its 8-character code; the second player joins with it. No sign-up: each browser gets an anonymous identity, and a private recovery code (shown once) moves it to another device.
+- **Three private rounds.** Both players answer the same question. Answers stay sealed until both are in; neither side can read the other's text early.
+- **AI reading of the two answers.** After each round the AI scores the pair and writes a short reading for both players: what they share and where they split, in how they think and what they value. The server turns the scores into a distance from 0 (closest) to 1000, and the two asteroids move to it.
+- **Honest unknowns.** When the answers give too little to go on, the round says so ("Not enough to go on this round") instead of showing a made-up distance, and it is left out of the average. A technical failure is shown as a failure, never as a result, with a retry.
+- **Game summary.** The overall distance averages the rounds that could be measured (at least two).
+- **Questions.** 45 hand-written questions across 15 directions, three drawn at random for each game.
+- **Live sync.** Both screens follow the same room state, recover after a refresh or a dropped connection, and never need a manual reload.
 
-Read [AGENTS.md](AGENTS.md), [PROJECT.md](docs/PROJECT.md), and [CONTRACTS.md](docs/CONTRACTS.md) before coding. Track progress in the [Notion Development Checklist](https://app.notion.com/p/3e7d830fac0481c8bf0ef203ac15c27e?pvs=204).
+## What's next
 
-**Start order:** B establishes the runtime and shared contracts → C provides fixtures → A builds the reveal UI while B/C implement services → integrate one real round before expanding.
+Two features are finished on the `production` branch but not tested yet, so they are not in `main`:
 
-### Local development
+- **Fresh AI questions.** While the room waits in the lobby, the server asks the model for up to two new questions, checks them, and mixes them at random with the hand-written ones. A slow or failed generation never holds up the start.
+- **No quick repeats.** Questions either player saw in their last five games are left out of the draw.
+
+Next steps:
+
+1. From `production`, apply its two new migrations (`supabase db push`), deploy the `game` function, and run `npm run verify:prompts` plus the remote checks below.
+2. Play a few real games on two phones.
+3. If both go well, merge `production` into `main`.
+
+Until then, deploy the backend from one branch only. Once `production`'s migrations are applied, `supabase db push` from `main` stops, because it finds migrations it doesn't have. Deploying `game` from `main` switches both features off.
+
+Later, if time allows: saving results, the personal ranking and the star map. The prediction mode is out of scope for now.
+
+## How it works
+
+```text
+Browser (React + TypeScript + Vite, hosted on Vercel)
+   │  anonymous session, then Edge Function calls; Realtime only says "something changed"
+   ▼
+Supabase
+   ├─ Edge Functions   identity · game · evaluate
+   ├─ Postgres         rooms, rounds, sealed answers (row-level security;
+   │                   the browser can read only a room's public state)
+   └─ OpenAI Responses API (model set by LLM_MODEL)
+        · compare two answers → structured scores and reading
+```
+
+- **Symmetric scoring (rubric fmp-v2).** The model rates two overlaps between the answers (imagery, focus) and profiles each answer on its own: how far it leaps from the obvious reading, four thinking-style axes (big picture ↔ detail, principles ↔ feelings, outward ↔ inward, settled ↔ open) and four value groups after Schwartz (openness, achievement, security, care for others). The server computes the distance from the gaps (association 30%, thinking 35%, values 35%). Answers are put in a canonical order first, so swapping players cannot change the result.
+- **Grounded readings.** Every scored comparison must quote each answer; quotes are matched back to the original text on the server, and unsupported output is rejected rather than shown.
+- **Race-safe rounds.** Starting, submitting, evaluating and continuing are single database transactions with row locks, so two phones pressing buttons at once cannot double-advance a round. Evaluation runs under a lease, with one automatic retry and two player retries.
+- **Privacy.** Logs never contain answers, quotes, recovery codes or tokens. The model sees only the question and the two answers.
+
+The full rules live in [CONTRACTS.md](docs/CONTRACTS.md): states and endpoints (sections 3–6), the scoring rubric (section 7) and permissions.
+
+## Run it locally
 
 Requirements: Node.js 20.19 or newer and npm.
 
@@ -137,156 +168,91 @@ cp .env.example .env.local
 npm run dev
 ```
 
-The public Supabase variables may remain empty for the current local shell. An empty value does not represent a successful service connection.
+Fill `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` in `.env.local` to play against a Supabase project. Without them, the home page says the build is not connected, and these demos still work with sample data:
 
-Checks and production build:
+| URL | What it shows |
+|---|---|
+| `/?preview=game` | A whole game with a simulated partner and server, including failures and retries |
+| `/?preview=reveal` | The reveal: answers, reading, and the asteroids moving to a distance |
+| `/?preview=screens` | Every other screen and its edge cases |
+| `/?preview=intro` | The opening scene |
+| `/?preview=contracts`, `/?preview=supabase` | Contract validation and an anonymous-session check |
+
+Type check and production build:
 
 ```bash
 npm run typecheck
 npm run build
-npm run preview
 ```
 
-The default page is the minimal runtime smoke test. Open `/?preview=contracts` for the B-owned local contract preview. This preview validates static local data only; it does not claim that Supabase or AI is connected.
-
-To verify a real Supabase anonymous session, copy `.env.example` to
-`.env.local`, fill in the project URL and publishable key, restart the dev
-server, and open `/?preview=supabase`. The verification is user-triggered and
-only displays a shortened user ID; it never prints session tokens. A successful
-anonymous sign-in does not by itself verify database RLS or controlled writes.
-
-After the `profiles` migration and `identity` Edge Function are deployed, the
-same preview can call `identity/me` and create one profile through
-`identity/create`. The browser has no direct grants on `public.profiles`; all
-access is mediated by the authenticated function. Recovery codes are shown once
-and must not be copied into logs, screenshots, issues, or committed files.
-
-Task 2.1 has a remote acceptance check for two independent anonymous sessions
-using the same nickname. It also recreates one client from the same session
-storage, verifies the stable profile mapping, repeats `identity/create`
-idempotently, and confirms direct browser-equivalent reads are denied:
+Unit tests (Node.js with built-in TypeScript support, 22.18+ or 23.6+):
 
 ```bash
-npm run verify:identity
+node --test tests/ai/*.test.ts tests/content/*.test.ts tests/contracts/*.test.ts tests/fixtures/*.test.ts
 ```
 
-This command uses `.env.local` and creates two test anonymous users and profiles
-in the linked Supabase project; they remain there until test-data cleanup is
-implemented. Generated test records use English-only labels. Its output never
-includes JWTs or recovery codes. Identity recovery and recovery-code rotation
-have a separate task 2.9 check below.
-
-Task 2.2 adds transactional room creation and joining. The host always occupies
-slot A; a row lock plus database uniqueness constraints allow exactly one slot B
-even when two players join concurrently. Creation is idempotent for the same
-profile and request ID, and an existing member can safely repeat `join`.
-
-After deploying migration `202609260002_create_rooms.sql` and the `game` Edge
-Function, run the real concurrency check with:
+## Deploy the backend
 
 ```bash
-npm run verify:rooms
+supabase link --project-ref <project-ref>
+supabase secrets set LLM_API_KEY=<key> LLM_MODEL=<model>
+supabase db push
+supabase functions deploy identity
+supabase functions deploy game
+supabase functions deploy evaluate
 ```
 
-This check creates one test room and three English-labeled test profiles in the
-linked Supabase project. It verifies idempotent creation, case-insensitive invite
-codes, one successful concurrent join, one `ROOM_FULL` response, idempotent
-rejoin, and denied direct browser reads of `participants`.
+Deploy `game` and the web app before `evaluate` when the result format changes. Secrets stay in Supabase; never put them in `VITE_*` variables.
 
-Task 2.3 adds transactional game start and controlled snapshots. The host can
-start only after both slots are occupied. One transaction freezes three distinct
-questions from the curated English fallback pool, advances the room to round 1,
-and leaves repeated start requests on the original prompt snapshots.
+## Remote acceptance checks
 
-After deploying migration `202609260003_start_game.sql` and the updated `game`
-Edge Function, run:
+These run against the project in `.env.local` and create throwaway test identities and rooms there.
 
-```bash
-npm run verify:start
-```
+| Command | What it checks | Model calls |
+|---|---|---|
+| `npm run verify:identity` | Anonymous identities, stable profile mapping, denied direct reads | No |
+| `npm run verify:rooms` | Room creation, concurrent joins (exactly one second player), room codes | No |
+| `npm run verify:start` | Only a full room's host can start; prompts are frozen | No |
+| `npm run verify:submit` | Sealed answers, replay and conflict handling, pre-reveal privacy | No |
+| `npm run verify:evaluate` | A real comparison and its stored result | Yes |
+| `npm run verify:continue` | Both players continue; three rounds finish | Yes |
+| `npm run verify:recovery` | Recovery-code transfer, rotation and rate limiting | No |
 
-The check verifies that a one-player room cannot start, a non-host cannot start,
-both players receive the same current prompt, repeated start does not redraw it,
-and browser-equivalent access to `rounds` is denied. AI-generated question
-candidates are not connected yet; their absence never blocks this curated
-fallback.
+`scripts/check-explanations.ts` runs the comparison prompt on synthetic cases for manual review (`node --env-file=supabase/functions/.env.local scripts/check-explanations.ts`).
 
-Tasks 2.4 and 2.5 add immutable submissions and pre-reveal data protection.
-Run the remote acceptance check with:
-
-```bash
-npm run verify:submit
-npm run verify:evaluate
-```
-
-The submission test verifies same-answer replay, conflicting-answer rejection,
-phase advancement only after both submissions, snapshots containing only the
-viewer's own answer, member-only reads of public room columns, and denied browser
-access to private room columns, rounds, and submission bodies. The evaluation test
-makes a billable real-provider call and should run only after migration 005 and the
-`evaluate` function are deployed with `LLM_API_KEY` and `LLM_MODEL` configured.
-
-Task 2.7 implements viewer-specific snapshot refresh after Realtime notifications,
-rejects older revisions, refreshes after reconnect/focus, and polls every three
-seconds only while the page is active and Realtime is unavailable. Revision
-ordering has a local test; browser disconnect/reconnect behavior remains a manual
-integration check.
-
-Task 2.8 stores each player's continue choice transactionally. One player waits,
-repeated requests do not advance twice, and the second player advances to the next
-round or finishes round three. Its remote check performs three real model calls:
-
-```bash
-npm run verify:continue
-```
-
-Task 2.9 transfers a profile to a fresh anonymous session, rotates the recovery
-code, invalidates the old auth binding, limits failures by both auth identity and
-hashed request source, and handles replayed request IDs without rotating twice.
-Its remote check intentionally submits one expired code but does not exhaust the
-shared source rate limit:
-
-```bash
-npm run verify:recovery
-```
-
-Dependencies are pinned exactly in `package.json` and `package-lock.json`. Run these commands from the existing repository root; do not create a nested project.
+## Repository layout
 
 ```text
 Find_Your_Planet/
-├── AGENTS.md
-├── docs/                 PROJECT, CONTRACTS, three role guides
+├── AGENTS.md                 rules for everyone working in the repo
+├── docs/                     PROJECT, CONTRACTS and the role guides
 ├── src/
-│   ├── App.tsx           B: flow integration (placeholder)
-│   ├── main.tsx          B: startup (placeholder)
-│   ├── screens/          A: six screen placeholders
-│   ├── components/       A: four component placeholders
-│   ├── styles/           A: CSS placeholders
-│   ├── services/         B: identity, game and evaluation clients
-│   ├── hooks/            B: snapshot synchronization and reconnect
-│   └── fixtures/         C: sample-data placeholder
+│   ├── App.tsx, GameApp.tsx  routes and the player flow
+│   ├── screens/              welcome, lobby, answer, reveal, result, records (+ demos)
+│   ├── components/           asteroids, answer cards, intro, loaders, shared UI
+│   ├── styles/               tokens and screen styles
+│   ├── services/, hooks/     Supabase clients and live room sync
+│   └── fixtures/             labeled demo results
 ├── supabase/
-│   ├── migrations/
+│   ├── migrations/           schema, row-level security and transactional functions
 │   └── functions/
-│       ├── game/
-│       ├── evaluate/
-│       ├── records/
-│       ├── identity/
+│       ├── identity/, game/, evaluate/
 │       └── _shared/
-│           ├── contracts/   B/C: client-safe definitions
-│           ├── ai/          C: server-only evaluation
-│           └── content/     C: question bank
-└── tests/
-    ├── ai/
-    └── integration/
+│           ├── contracts/    Zod schemas shared by browser and server
+│           ├── ai/           comparison and question-generation prompts, scoring, evidence checks
+│           └── content/      question bank and pool selection
+├── scripts/                  live model checks
+└── tests/                    ai, content, contracts, fixtures, hooks, integration
 ```
 
-Unimplemented backend/test directories retain `.gitkeep` placeholders. The
-implemented `identity`, `game`, and `evaluate` functions and their migrations are
-deployable; tasks 2.6–2.9 remain unverified until their remote integration checks
-pass.
-C's evaluation handoff is documented in
-[HANDOFF_C_EVALUATION](docs/HANDOFF_C_EVALUATION.md). Role guides link to the
-existing checklist task numbers; no tasks are automatically marked complete.
+## Team
 
-The existing repository name `Find_Your_Planet` and English introduction are retained; the current product-planning name is **Find Your Planet**. Do not rename the remote or rewrite the introduction as part of scaffolding.
+| Role | Owns | Start here |
+|---|---|---|
+| A — Frontend & experience | Screens, motion, mobile experience | [START_FRONTEND](docs/START_FRONTEND.md) |
+| B — Backend & integration | Rooms, sync, identity, deployment | [START_BACKEND](docs/START_BACKEND.md) |
+| C — AI & questions | Questions, prompts, scoring and evaluation tests | [START_AI](docs/START_AI.md) |
+
+Read [AGENTS.md](AGENTS.md), [PROJECT.md](docs/PROJECT.md) and [CONTRACTS.md](docs/CONTRACTS.md) before changing code. Progress is tracked in the [Notion Development Checklist](https://app.notion.com/p/3e7d830fac0481c8bf0ef203ac15c27e?pvs=204).
+
+The repository name `Find_Your_Planet` and the English introduction above are kept as the team wrote them.
