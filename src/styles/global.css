@@ -21,6 +21,13 @@ body {
   outline-offset: 3px;
 }
 
+/* App shell: the screens are mobile-first and center themselves; cap the stage on wide screens. */
+.fyp-app {
+  max-width: 1040px;
+  min-height: 100dvh;
+  margin: 0 auto;
+}
+
 .fyp-sr-only {
   position: absolute !important;
   width: 1px;

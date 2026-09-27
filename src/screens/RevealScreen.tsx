@@ -13,15 +13,12 @@ type Player = GameSnapshot["players"][number];
 type ContinuedFlags = GameSnapshot["continued"];
 export type RevealedRound = GameSnapshot["revealedRounds"][number];
 
-/**
- * View state for this screen. B's session hook maps the snapshot onto it
- * (see docs handoff: retries left and "exhausted" need snapshot fields).
- */
+/** View state for this screen; GameScreen maps the snapshot (evaluationState, evaluationRetriesRemaining) onto it. */
 export type RevealStatus =
   | { kind: "analyzing" }
   | { kind: "failed"; retriesLeft: number | null }
   | { kind: "retrying" }
-  | { kind: "exhausted"; checked?: boolean }
+  | { kind: "exhausted" }
   | { kind: "revealed"; round: RevealedRound };
 
 export type RevealScreenProps = {
@@ -36,7 +33,8 @@ export type RevealScreenProps = {
   /** False when this round was already revealed on this device (refresh, reconnect): render the finished state. */
   animate: boolean;
   onRetry?: () => void;
-  onCheckAgain?: () => void;
+  /** Retries used up: leave this room on this device only (CONTRACTS: no server-side leave). */
+  onLeave?: () => void;
   /** game/continue. When it returns a promise, the button waits for it and shows an error if it fails. */
   onContinue?: () => Promise<unknown> | void;
 };
@@ -123,7 +121,7 @@ function RevealView({
   continued,
   animate,
   onRetry,
-  onCheckAgain,
+  onLeave,
   onContinue,
 }: RevealScreenProps) {
   const promptId = useId();
@@ -283,11 +281,9 @@ function RevealView({
         {status.kind === "exhausted" ? (
           <section className="rv-fail" role="alert">
             <h2><WarnIcon />We couldn't finish this comparison</h2>
-            <p>We tried again and it still didn't work. This is a technical problem, not a lack of clues, and it isn't a distance. Both answers are saved.</p>
-            <button className="rv-btn rv-btn--secondary" type="button" onClick={onCheckAgain}>Check again</button>
-            <p className="rv-fine" role="status">
-              {status.checked ? "Checked just now. There's no update yet." : "This only checks for an update. It won't start a new comparison."}
-            </p>
+            <p>We tried again and it still didn't work. This is a technical problem, not a lack of clues, and it isn't a distance. This round can't be finished, so the game stops here.</p>
+            {onLeave ? <button className="rv-btn rv-btn--secondary" type="button" onClick={onLeave}>Leave this room</button> : null}
+            <p className="rv-fine">You can start a new game from the home screen.</p>
           </section>
         ) : null}
 

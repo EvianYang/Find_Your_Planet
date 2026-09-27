@@ -1,9 +1,9 @@
 import { ApiErrorCodeSchema, type ApiErrorCode } from "@contracts/common.ts";
+import { JoinCodeSchema } from "@contracts/game.ts";
 
 /**
- * Reads an API error code from whatever the service layer throws.
- * Current B clients throw `new Error("CODE: message")`; a future `{ code }` object is accepted too.
- * The UI shows its own English copy and never renders the server message.
+ * Reads an API error code from whatever the service layer throws: B's ApiClientError carries `code`;
+ * a plain `Error("CODE: message")` is still understood. The UI shows its own English copy, never the server message.
  */
 export function errorCodeOf(error: unknown): ApiErrorCode | null {
   if (typeof error === "object" && error !== null && "code" in error) {
@@ -76,10 +76,10 @@ export function retryableOf(error: unknown): boolean | null {
 export const unicodeLength = (value: string) => Array.from(value).length;
 export const clipUnicode = (value: string, max: number) => Array.from(value).slice(0, max).join("");
 
-/** Join codes: 8 characters, A–Z without I/O plus 2–9 (matches the rooms table constraint on the backend branch). */
+/** Join codes: 8 characters from ABCDEFGHJKLMNPQRSTUVWXYZ23456789 (JoinCodeSchema in the shared contracts). */
 export const JOIN_CODE_LENGTH = 8;
 export const normalizeJoinCode = (value: string) => value.toUpperCase().replace(/[^A-Z0-9]/g, "");
-export const isValidJoinCode = (value: string) => /^[A-HJ-NP-Z2-9]{8}$/.test(value);
+export const isValidJoinCode = (value: string) => JoinCodeSchema.safeParse(value).success;
 
 /** Recovery codes: 26 characters from the same alphabet, shown in groups of four; dashes and spaces are optional. */
 export const normalizeRecoveryCode = (value: string) => value.toUpperCase().replace(/[^A-Z0-9]/g, "");

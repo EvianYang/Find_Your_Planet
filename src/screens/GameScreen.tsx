@@ -5,7 +5,7 @@ import type { GameSnapshot, RoundIndex, Slot } from "@contracts/game.ts";
 import "../styles/tokens.css";
 import "../styles/screens.css";
 import { PlanetPair } from "../components/PlanetPair.tsx";
-import { errorCodeOf, errorCopy, retryableOf } from "../components/error-copy.ts";
+import { errorCodeOf, errorCopy, retryableOf, type ErrorContext } from "../components/error-copy.ts";
 import { Button, FieldError, WaitIcon } from "../components/ui.tsx";
 import { AnswerScreen } from "./AnswerScreen.tsx";
 import { LobbyScreen } from "./LobbyScreen.tsx";
@@ -17,10 +17,6 @@ export type GameScreenProps = {
   snapshot: GameSnapshot | null;
   loading: boolean;
   syncError: Error | null;
-  /** Not in the snapshot yet (requested from B): "A" after createRoom, "B" after joinRoom. Keep it with roomId across refreshes. */
-  viewerSlot: Slot;
-  /** Not in the snapshot yet (requested from B): from the createRoom response. null for the player who joined. */
-  joinCode: string | null;
   onStart: () => Promise<unknown>;
   onSubmit: (roundIndex: RoundIndex, answer: string) => Promise<unknown>;
   /** evaluate/run. Either device may call it; the server lets one run and answers "processing" to the other. */
@@ -32,11 +28,17 @@ export type GameScreenProps = {
   onSave?: () => Promise<unknown>;
   alreadySaved?: boolean;
   onOpenRecords?: () => void;
-  onBackToStart?: () => void;
+  /** Local exit: forget this room on this device and go back to the start (no server-side leave). */
+  onLeave?: () => void;
 };
 
 /** The server's evaluation lease is 60 seconds; after that another call can take over a stuck run. */
 const LEASE_RECHECK_MS = 65_000;
+/** The room is gone or this browser lost access: retrying can't help, only leaving can. */
+const isFatal = (error: unknown) => {
+  const code = errorCodeOf(error);
+  return code === "EXPIRED" || code === "NOT_FOUND" || code === "UNAUTHORIZED" || code === "IDENTITY_REPLACED";
+};
 const slotKey = (slot: Slot) => (slot === "A" ? "a" : "b");
 
 async function settle(refresh: () => Promise<void>) {
@@ -71,25 +73,24 @@ type EvaluationLocal = {
   manual: boolean;
   /** The last call on this device failed and can be tried again. */
   failed: boolean;
-  /** Retries are used up (needs `retryable` from the service layer). */
+  /** A call came back EVALUATION_FAILED with retryable: false (can arrive before the snapshot shows it). */
   exhausted: boolean;
   /** A failure was seen in this round, so a new "processing" is a retry. */
   sawFailure: boolean;
-  checked: boolean;
 };
 const freshEvaluation = (key: string): EvaluationLocal => ({
-  key, inFlight: false, manual: false, failed: false, exhausted: false, sawFailure: false, checked: false,
+  key, inFlight: false, manual: false, failed: false, exhausted: false, sawFailure: false,
 });
 
 /**
  * Starts evaluate/run once both answers are in, picks up a stuck run after the lease,
- * and turns the outcome into RevealScreen's status. The snapshot has no retry counts yet,
- * so "retries left" is unknown and "exhausted" only appears after a call reports it.
+ * and turns the outcome plus evaluationRetriesRemaining into RevealScreen's status.
  */
 function useEvaluation(snapshot: GameSnapshot | null, onEvaluate: GameScreenProps["onEvaluate"], onRefresh: () => Promise<void>) {
   const round = snapshot?.phase === "evaluating" && snapshot.currentRound > 0 ? (snapshot.currentRound as RoundIndex) : null;
   const key = snapshot && round ? `${snapshot.roomId}:${round}` : "";
   const serverState = snapshot?.evaluationState;
+  const retriesLeft = snapshot?.evaluationRetriesRemaining ?? null;
   const [stored, setStored] = useState<EvaluationLocal>(() => freshEvaluation(key));
   const local = stored.key === key ? stored : freshEvaluation(key);
   const inFlight = useRef<string | null>(null);
@@ -103,7 +104,7 @@ function useEvaluation(snapshot: GameSnapshot | null, onEvaluate: GameScreenProp
   const run = useCallback(async (manual: boolean) => {
     if (!round || !key || inFlight.current === key) return;
     inFlight.current = key;
-    update(key, { inFlight: true, manual, failed: false, checked: false });
+    update(key, { inFlight: true, manual, failed: false });
     try {
       await latest.current.onEvaluate(round);
     } catch (err) {
@@ -111,14 +112,16 @@ function useEvaluation(snapshot: GameSnapshot | null, onEvaluate: GameScreenProp
       if (code === "EVALUATION_FAILED") {
         const exhausted = retryableOf(err) === false;
         update(key, { failed: !exhausted, exhausted, sawFailure: true });
-      } else if (code !== "INVALID_PHASE" && code !== "CONFLICT") {
+      } else if (code !== "INVALID_PHASE" && code !== "CONFLICT" && !isFatal(err)) {
         // Network or service trouble before the run started: offer Try again instead of spinning.
+        // Fatal codes surface through the snapshot refresh instead.
         update(key, { failed: true });
       }
     } finally {
+      // Refresh before releasing the guard, so a stale "pending" snapshot can't start a second call.
+      await settle(latest.current.onRefresh);
       inFlight.current = null;
       update(key, { inFlight: false });
-      await settle(latest.current.onRefresh);
     }
   }, [key, round, update]);
 
@@ -139,19 +142,18 @@ function useEvaluation(snapshot: GameSnapshot | null, onEvaluate: GameScreenProp
   }, [key, serverState, local.exhausted, local.failed, local.inFlight, run]);
 
   let status: RevealStatus = { kind: "analyzing" };
-  if (local.exhausted) status = { kind: "exhausted", checked: local.checked };
+  if (local.exhausted || (serverState === "failed" && retriesLeft === 0)) status = { kind: "exhausted" };
   else if (local.inFlight && local.manual) status = { kind: "retrying" };
   else if (!local.inFlight && (serverState === "failed" || (local.failed && serverState !== "processing"))) {
-    status = { kind: "failed", retriesLeft: null };
+    status = { kind: "failed", retriesLeft: serverState === "failed" ? retriesLeft : null };
   }
-  else if (serverState === "processing" && local.sawFailure) status = { kind: "retrying" };
+  // A manual retry has been claimed in this round (also known after a refresh or on the partner's device).
+  else if (serverState === "processing" && (local.sawFailure || (retriesLeft !== null && retriesLeft < 2))) {
+    status = { kind: "retrying" };
+  }
 
   const retry = () => void run(true);
-  const checkAgain = async () => {
-    await settle(latest.current.onRefresh);
-    update(key, { checked: true });
-  };
-  return { status, retry, checkAgain };
+  return { status, retry };
 }
 
 /** Wires the session snapshot to the screens by phase. Pure UI: B passes the hook state and service calls in. */
@@ -159,8 +161,6 @@ export function GameScreen({
   snapshot,
   loading,
   syncError,
-  viewerSlot,
-  joinCode,
   onStart,
   onSubmit,
   onEvaluate,
@@ -169,7 +169,7 @@ export function GameScreen({
   onSave,
   alreadySaved,
   onOpenRecords,
-  onBackToStart,
+  onLeave,
 }: GameScreenProps) {
   const evaluation = useEvaluation(snapshot, onEvaluate, onRefresh);
 
@@ -183,11 +183,16 @@ export function GameScreen({
   };
 
   if (!snapshot) {
-    return <GameStatus loading={loading} error={syncError} onRetry={onRefresh} onBackToStart={onBackToStart} />;
+    return <GameStatus loading={loading} error={syncError} onRetry={onRefresh} onLeave={onLeave} />;
   }
 
+  const fatal = isFatal(syncError);
+  if (fatal && snapshot.phase !== "finished") {
+    return <GameStatus loading={false} error={syncError} onRetry={onRefresh} onLeave={onLeave} />;
+  }
+
+  const { viewerSlot, joinCode, players, currentRound, currentPrompt } = snapshot;
   const partner = viewerSlot === "A" ? "B" : "A";
-  const { players, currentRound, currentPrompt } = snapshot;
   const revealRound = snapshot.phase === "reveal"
     ? snapshot.revealedRounds.find((r) => r.roundIndex === currentRound) ?? null
     : null;
@@ -221,7 +226,7 @@ export function GameScreen({
         continued={snapshot.continued}
         animate={false}
         onRetry={evaluation.retry}
-        onCheckAgain={() => void evaluation.checkAgain()}
+        onLeave={onLeave}
       />
     );
   } else if (snapshot.phase === "reveal" && revealRound) {
@@ -250,19 +255,19 @@ export function GameScreen({
         alreadySaved={alreadySaved}
         onSave={onSave}
         onOpenRecords={onOpenRecords}
-        onBackToStart={onBackToStart}
+        onBackToStart={onLeave}
       />
     );
   }
 
   return (
     <>
-      {syncError ? (
+      {syncError && !fatal ? (
         <p className="sc-sync" role="status">
           Having trouble reaching the game. We'll keep trying.
         </p>
       ) : null}
-      {screen ?? <GameStatus loading error={null} onRetry={onRefresh} onBackToStart={onBackToStart} />}
+      {screen ?? <GameStatus loading error={null} onRetry={onRefresh} onLeave={onLeave} />}
     </>
   );
 }
@@ -274,30 +279,36 @@ function FirstTimeReveal({ seenKey, ...props }: Omit<RevealScreenProps, "animate
   return <RevealScreen {...props} animate={animate} />;
 }
 
-/** Before the first snapshot arrives, or when it can't be loaded at all. */
-function GameStatus({
+/** Before the first snapshot arrives, or when it can't be loaded at all. Also used while the app starts. */
+export function GameStatus({
   loading,
   error,
   onRetry,
-  onBackToStart,
+  onLeave,
+  title = "We couldn't open this room",
+  message = "Opening your room…",
+  errorContext = "room",
 }: {
   loading: boolean;
   error: Error | null;
   onRetry: () => Promise<void>;
-  onBackToStart?: () => void;
+  onLeave?: () => void;
+  title?: string;
+  message?: string;
+  errorContext?: ErrorContext;
 }) {
   const [retrying, setRetrying] = useState(false);
-  const code = errorCodeOf(error);
-  const final = code === "EXPIRED" || code === "NOT_FOUND";
+  const failed = Boolean(error) && !loading;
+  const final = isFatal(error);
 
   return (
-    <section className="fyp-screen" lang="en" aria-label="Room">
+    <section className="fyp-screen" lang="en" aria-label={failed ? title : message}>
       <PlanetPair mode="resting" nicknames={{ A: "", B: "" }} ariaLabel="Two small asteroids resting in the night sky." />
       <div className="sc-sheet">
-        {error && !loading ? (
+        {failed ? (
           <>
-            <h1 className="sc-title">We couldn't open this room</h1>
-            <FieldError id="fyp-room-error">{errorCopy(error, "room")}</FieldError>
+            <h1 className="sc-title">{title}</h1>
+            <FieldError id="fyp-room-error">{errorCopy(error, errorContext)}</FieldError>
             <div className="sc-stack">
               {!final ? (
                 <Button
@@ -310,13 +321,13 @@ function GameStatus({
                   Try again
                 </Button>
               ) : null}
-              {onBackToStart ? <button className="sc-link" type="button" onClick={onBackToStart}>Back to start</button> : null}
+              {onLeave ? <button className="sc-link" type="button" onClick={onLeave}>Back to start</button> : null}
             </div>
           </>
         ) : (
           <p className="sc-status" role="status">
             <WaitIcon />
-            <span>Opening your room…</span>
+            <span>{message}</span>
           </p>
         )}
       </div>

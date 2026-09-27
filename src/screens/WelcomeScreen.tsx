@@ -127,8 +127,12 @@ export function WelcomeScreen({
     setBusy("restore");
     try {
       const result = await onRecover(recovery.trim());
+      setRecovery("");
       if (result.recoveryCode) setNewCode({ code: result.recoveryCode, variant: "restored", next: "recovered" });
-      else onRecovered?.();
+      else {
+        setPanel("start");
+        onRecovered?.();
+      }
     } catch (err) {
       fail("recovery", errorCopy(err, "recover"));
     } finally {
@@ -144,8 +148,10 @@ export function WelcomeScreen({
         onDone={() => {
           const next = newCode.next;
           setNewCode(null);
-          if (next === "recovered") onRecovered?.();
-          else void runAction(next);
+          if (next === "recovered") {
+            setPanel("start");
+            onRecovered?.();
+          } else void runAction(next);
         }}
       />
     );
@@ -229,7 +235,7 @@ export function WelcomeScreen({
                 {...invalid("code")}
               />
               <div className="sc-help">
-                <span>{JOIN_CODE_LENGTH} characters, from your partner's invite.</span>
+                <span>{JOIN_CODE_LENGTH} characters from the invite. The same code takes you back into a game you're already in.</span>
               </div>
               {fieldError("code")}
             </div>

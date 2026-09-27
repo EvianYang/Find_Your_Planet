@@ -57,13 +57,12 @@ export default function GamePreview() {
   const [width, setWidth] = useState(390);
   const [plan, setPlan] = useState(["medium", "close", "partial"]);
   const [outcome, setOutcome] = useState<Outcome>("ok");
-  const [passRetryable, setPassRetryable] = useState(true);
   const [joinCodeKnown, setJoinCodeKnown] = useState(true);
-  const [connection, setConnection] = useState<"ok" | "unstable" | "loading" | "NOT_FOUND" | "EXPIRED" | "offline">("ok");
+  const [connection, setConnection] = useState<"ok" | "unstable" | "expired-later" | "loading" | "NOT_FOUND" | "EXPIRED" | "offline">("ok");
   const [log, setLog] = useState<string[]>([]);
   const [gameKey, setGameKey] = useState(0);
-  const settings = useRef({ viewer, plan, outcome, passRetryable });
-  settings.current = { viewer, plan, outcome, passRetryable };
+  const settings = useRef({ viewer, plan, outcome });
+  settings.current = { viewer, plan, outcome };
 
   const note = (text: string) => setLog((l) => [text, ...l].slice(0, 10));
   const set = (change: Partial<Sim>) => {
@@ -93,8 +92,7 @@ export default function GamePreview() {
     if (s.phase !== "evaluating") throw apiError("INVALID_PHASE", false);
     if (s.running) return { status: "processing" };
     const manual = s.evaluationState === "failed";
-    const retryable = (value: boolean) => (settings.current.passRetryable ? value : undefined);
-    if (manual && s.manualRetries >= 2) throw apiError("EVALUATION_FAILED", retryable(false));
+    if (manual && s.manualRetries >= 2) throw apiError("EVALUATION_FAILED", false);
     set({ evaluationState: "processing", running: true, manualRetries: s.manualRetries + (manual ? 1 : 0) });
     await wait(1400);
     const result = settings.current.outcome;
@@ -108,7 +106,7 @@ export default function GamePreview() {
     }
     if (result === "fail") {
       set({ evaluationState: "failed", running: false });
-      throw apiError("EVALUATION_FAILED", retryable(sim.current.manualRetries < 2));
+      throw apiError("EVALUATION_FAILED", sim.current.manualRetries < 2);
     }
     const fixture = FIXTURES[settings.current.plan[sim.current.round - 1]];
     if (fixture.response.data?.status !== "ready") throw new Error("Fixture has no result");
@@ -124,6 +122,8 @@ export default function GamePreview() {
   const measured = s.revealed.map((r) => r.result.distance).filter((d): d is number => d !== null);
   const snapshot: GameSnapshot = {
     roomId: ROOM_ID,
+    viewerSlot: viewer,
+    joinCode: viewer === "A" && joinCodeKnown ? "K7QF2MXA" : null,
     phase: s.phase,
     currentRound: s.round,
     revision: s.revision,
@@ -134,6 +134,7 @@ export default function GamePreview() {
     submitted: s.submitted,
     continued: s.continued,
     evaluationState: s.evaluationState,
+    evaluationRetriesRemaining: s.round > 0 ? Math.max(0, 2 - s.manualRetries) : null,
     revealedRounds: s.revealed,
     overall: s.phase === "finished"
       ? {
@@ -170,9 +171,7 @@ export default function GamePreview() {
           key={gameKey}
           snapshot={connection === "loading" || failure ? null : snapshot}
           loading={connection === "loading"}
-          syncError={connection === "unstable" ? new Error("Could not refresh the game.") : failure}
-          viewerSlot={viewer}
-          joinCode={viewer === "A" && joinCodeKnown ? "K7QF2MXA" : null}
+          syncError={connection === "unstable" ? new Error("Could not refresh the game.") : connection === "expired-later" ? apiError("EXPIRED", false) : failure}
           onStart={async () => { await wait(500); note("game/start"); set({ phase: "answering", round: 1 }); }}
           onSubmit={async (round, answer) => { await wait(600); note(`game/submit round ${round}`); set({ ownAnswer: answer }); submitFor(me()); }}
           onEvaluate={async (round) => { note(`evaluate/run round ${round}`); return evaluate(); }}
@@ -180,7 +179,7 @@ export default function GamePreview() {
           onRefresh={async () => { note("game/snapshot"); }}
           onSave={async () => { await wait(600); note("records/save"); }}
           onOpenRecords={() => note("open My encounters")}
-          onBackToStart={() => { note("back to start"); reset(); }}
+          onLeave={() => { note("left the room on this device"); reset(); }}
         />
       </div>
       <aside aria-label="Preview controls" style={{ display: "grid", gap: 12, minWidth: 260, maxWidth: 340, color: "#e6e4de", fontSize: 14 }}>
@@ -197,7 +196,6 @@ export default function GamePreview() {
             <option value="stuck">Stays processing (other device lost its lease)</option>
           </select>
         </label>
-        <label><input type="checkbox" checked={passRetryable} onChange={(e) => setPassRetryable(e.target.checked)} /> Service passes <code>retryable</code> through (needed for the “exhausted” state)</label>
         {[0, 1, 2].map((i) => (
           <label key={i} style={control}>Round {i + 1} result
             <select value={plan[i]} onChange={(e) => setPlan((p) => p.map((v, j) => (j === i ? e.target.value : v)))}>
@@ -209,6 +207,7 @@ export default function GamePreview() {
           <select value={connection} onChange={(e) => setConnection(e.target.value as typeof connection)}>
             <option value="ok">OK</option>
             <option value="unstable">Refresh failing (last snapshot shown)</option>
+            <option value="expired-later">Room expired while open (EXPIRED on refresh)</option>
             <option value="loading">First snapshot loading</option>
             <option value="offline">Room can't load (network)</option>
             <option value="NOT_FOUND">Room can't load (NOT_FOUND)</option>
@@ -220,7 +219,7 @@ export default function GamePreview() {
             <option value="A">A (host)</option><option value="B">B (joined)</option>
           </select>
         </label>
-        <label><input type="checkbox" checked={joinCodeKnown} onChange={(e) => setJoinCodeKnown(e.target.checked)} /> Host knows the room code</label>
+        <label><input type="checkbox" checked={joinCodeKnown} onChange={(e) => setJoinCodeKnown(e.target.checked)} /> Snapshot includes the room code (host)</label>
         <label style={control}>Width
           <select value={width} onChange={(e) => setWidth(Number(e.target.value))}>
             <option value={390}>390</option><option value={375}>375</option><option value={320}>320</option><option value={1040}>1040</option>

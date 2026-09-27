@@ -11,7 +11,7 @@ import "../styles/global.css";
 import { ROUND_RESULT_FIXTURES, type DemoRoundFixture } from "../fixtures/round-results.ts";
 import { RevealScreen, type RevealStatus } from "./RevealScreen.tsx";
 
-type StatusChoice = "revealed" | "analyzing" | "failed-2" | "failed-1" | "retrying" | "exhausted" | "exhausted-checked";
+type StatusChoice = "revealed" | "analyzing" | "failed-2" | "failed-1" | "retrying" | "exhausted";
 
 const STATUS_LABELS: Record<StatusChoice, string> = {
   revealed: "Revealed",
@@ -20,7 +20,6 @@ const STATUS_LABELS: Record<StatusChoice, string> = {
   "failed-1": "Technical error (1 retry left)",
   retrying: "Retrying…",
   exhausted: "Out of retries",
-  "exhausted-checked": "Out of retries (checked again)",
 };
 
 function toStatus(choice: StatusChoice, fixture: DemoRoundFixture): RevealStatus {
@@ -35,7 +34,6 @@ function toStatus(choice: StatusChoice, fixture: DemoRoundFixture): RevealStatus
   if (choice === "failed-1") return { kind: "failed", retriesLeft: 1 };
   if (choice === "retrying") return { kind: "retrying" };
   if (choice === "exhausted") return { kind: "exhausted" };
-  if (choice === "exhausted-checked") return { kind: "exhausted", checked: true };
   return { kind: "analyzing" };
 }
 
@@ -67,7 +65,7 @@ export default function RevealPreview() {
           continued={continued}
           animate={animate}
           onRetry={() => setChoice("retrying")}
-          onCheckAgain={() => setChoice("exhausted-checked")}
+          onLeave={() => setChoice("analyzing")}
           onContinue={() => setContinued((c) => ({ ...c, [meKey]: true }))}
         />
       </div>
