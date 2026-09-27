@@ -78,6 +78,7 @@ export default function ScreensPreview() {
   const [viewer, setViewer] = useState<Slot>("A");
   const [profile, setProfile] = useState<string | null>(null);
   const [recoverReady, setRecoverReady] = useState(true);
+  const [codeKnown, setCodeKnown] = useState(false);
   const [partnerJoined, setPartnerJoined] = useState(false);
   const [joinCode, setJoinCode] = useState<string | null>("K7QF2MXA");
   const [failNext, setFailNext] = useState(false);
@@ -127,7 +128,7 @@ export default function ScreensPreview() {
       />
     );
   } else if (screen === "recovery") {
-    device = <RecoveryCodePanel key={key} code={DEMO_CODE} variant="view" onBack={() => go("records")} onRotate={async () => { await maybeFail("INTERNAL_ERROR"); note("identity/rotate_recovery"); return { recoveryCode: DEMO_CODE_NEW }; }} />;
+    device = <RecoveryCodePanel key={`${key}-${codeKnown}`} code={codeKnown ? DEMO_CODE : null} variant="view" onBack={() => go("records")} onRotate={async () => { await maybeFail("INTERNAL_ERROR"); note("identity/rotate_recovery"); return { recoveryCode: DEMO_CODE_NEW }; }} />;
   } else if (screen === "lobby") {
     device = <LobbyScreen key={key} joinCode={joinCode} players={lobbyPlayers} viewerSlot={viewer} onStart={async () => { await maybeFail("INVALID_PHASE"); note("game/start"); go("answer"); }} />;
   } else if (screen === "answer") {
@@ -227,6 +228,9 @@ export default function ScreensPreview() {
             </label>
             <label><input type="checkbox" checked={alreadySaved} onChange={(e) => setAlreadySaved(e.target.checked)} /> Already saved (after refresh)</label>
           </>
+        ) : null}
+        {screen === "recovery" ? (
+          <label><input type="checkbox" checked={codeKnown} onChange={(e) => setCodeKnown(e.target.checked)} /> This browser still has the code (just issued)</label>
         ) : null}
         {screen === "records" ? (
           <label style={control}>Records

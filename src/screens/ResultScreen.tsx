@@ -20,8 +20,8 @@ export type ResultScreenProps = {
   rounds: RevealedRound[];
   /** Whether this player already saved this game (requested from B so a refresh doesn't offer saving again). */
   alreadySaved?: boolean;
-  /** records/save. Each player decides separately. */
-  onSave: () => Promise<unknown>;
+  /** records/save. Each player decides separately. Omit until the backend implements it; the screen then says saving isn't available yet. */
+  onSave?: () => Promise<unknown>;
   onOpenRecords?: () => void;
   onBackToStart?: () => void;
 };
@@ -46,6 +46,7 @@ export function ResultScreen({ players, viewerSlot, overall, rounds, alreadySave
   }, [state]);
 
   const save = async () => {
+    if (!onSave) return;
     setState("saving");
     setError(null);
     moved.current = true;
@@ -114,6 +115,8 @@ export function ResultScreen({ players, viewerSlot, overall, rounds, alreadySave
             </>
           ) : state === "closed" ? (
             <FieldError id={`${id}-closed`}>This room has closed, so this game can't be saved anymore.</FieldError>
+          ) : !onSave ? (
+            <p className="sc-status" role="status"><WaitIcon /><span>Saving isn't available yet.</span></p>
           ) : (
             <>
               <p className="sc-small">

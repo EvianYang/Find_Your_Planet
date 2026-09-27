@@ -6,7 +6,8 @@ import { errorCopy } from "./error-copy.ts";
 import { Button, CheckIcon, FieldError, useCopy } from "./ui.tsx";
 
 export type RecoveryCodePanelProps = {
-  code: string;
+  /** null in the view variant when this browser doesn't have the current code (the server only keeps a hash). */
+  code: string | null;
   /** new: shown once right after identity/create; restored: after identity/recover; view: opened later. */
   variant: "new" | "restored" | "view";
   /** new / restored: primary action once the player has saved the code. */
@@ -49,13 +50,16 @@ export function RecoveryCodePanel({ code, variant, onDone, onRotate, onBack }: R
     }
   };
 
+  const unknown = current === null;
   const title = variant === "new" ? "Your private recovery code" : variant === "restored" ? "Welcome back" : "Recovery code";
   const lede =
     variant === "new"
       ? "Keep it somewhere safe. It opens your saved encounters on another device."
       : variant === "restored"
         ? "Your encounters are here. We've issued a new recovery code, and the old one no longer works."
-        : "Use it to open your encounters on another device. Anyone with this code can open them, so keep it private.";
+        : unknown
+          ? "We only keep a scrambled version, so we can't show your current code again. If you've lost it, get a new one. Your current code stops working as soon as you do."
+          : "Use it to open your encounters on another device. Anyone with this code can open them, so keep it private.";
 
   return (
     <section className="fyp-screen" lang="en" aria-labelledby="fyp-recovery-title">
@@ -70,26 +74,30 @@ export function RecoveryCodePanel({ code, variant, onDone, onRotate, onBack }: R
           {title}
         </h1>
         <p className="sc-lede">{lede}</p>
-        <p className="sc-code" aria-label={`Recovery code: ${spell(current)}`}>
-          {current.split("-").map((group, index) => (
-            <span key={`${group}-${index}`}>{group}</span>
-          ))}
-        </p>
+        {current !== null ? (
+          <p className="sc-code" aria-label={`Recovery code: ${spell(current)}`}>
+            {current.split("-").map((group, index) => (
+              <span key={`${group}-${index}`}>{group}</span>
+            ))}
+          </p>
+        ) : null}
         {rotated ? (
           <p className="sc-copied" role="status">
             <CheckIcon />
             New code issued. Your old code no longer works.
           </p>
         ) : null}
-        <div className="sc-stack">
-          <Button kind="secondary" onClick={() => void copy(current)}>
-            {message ? "Copy again" : "Copy code"}
-          </Button>
-          <p className="sc-copied" role="status">
-            {message ? <CheckIcon /> : null}
-            {message}
-          </p>
-        </div>
+        {current !== null ? (
+          <div className="sc-stack">
+            <Button kind="secondary" onClick={() => void copy(current)}>
+              {message ? "Copy again" : "Copy code"}
+            </Button>
+            <p className="sc-copied" role="status">
+              {message ? <CheckIcon /> : null}
+              {message}
+            </p>
+          </div>
+        ) : null}
         {variant === "new" ? (
           <ul className="sc-notes">
             <li>We only keep a scrambled version, so we can't show it again from our side or find it by nickname.</li>
@@ -108,11 +116,18 @@ export function RecoveryCodePanel({ code, variant, onDone, onRotate, onBack }: R
                 Cancel
               </button>
             </div>
+          ) : unknown ? (
+            <Button kind="secondary" onClick={() => setConfirming(true)}>
+              Get a new code
+            </Button>
           ) : (
             <button className="sc-link" type="button" onClick={() => setConfirming(true)}>
               Get a new code
             </button>
           )
+        ) : null}
+        {variant === "view" && unknown && !onRotate ? (
+          <p className="sc-status" role="status">Getting a new code isn't available yet.</p>
         ) : null}
         {error ? <FieldError id="fyp-recovery-error">{error}</FieldError> : null}
         {variant !== "view" ? (

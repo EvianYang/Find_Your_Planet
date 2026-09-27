@@ -99,6 +99,7 @@
 .sc-status svg { width: 18px; height: 18px; flex: none; }
 .sc-status:focus { outline: none; }
 .sc-status:focus-visible { outline: 2px solid var(--fyp-ink); outline-offset: 3px; }
+.sc-sync { margin: 0; padding: 8px 16px; background: var(--fyp-warn-tint); border-bottom: 1px solid var(--fyp-warn-line); color: var(--fyp-warn); font-size: 13px; line-height: 20px; text-align: center; }
 .sc-copied { margin: 0; display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--fyp-muted); }
 .sc-copied svg { width: 16px; height: 16px; flex: none; }
 

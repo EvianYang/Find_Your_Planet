@@ -6,6 +6,7 @@ import "../styles/tokens.css";
 import "../styles/reveal.css";
 import { AnswerCard } from "../components/AnswerCard.tsx";
 import { PlanetPair } from "../components/PlanetPair.tsx";
+import { errorCopy } from "../components/error-copy.ts";
 import { unknownKind } from "../components/planet-geometry.ts";
 
 type Player = GameSnapshot["players"][number];
@@ -36,7 +37,8 @@ export type RevealScreenProps = {
   animate: boolean;
   onRetry?: () => void;
   onCheckAgain?: () => void;
-  onContinue?: () => void;
+  /** game/continue. When it returns a promise, the button waits for it and shows an error if it fails. */
+  onContinue?: () => Promise<unknown> | void;
 };
 
 /** answers → summary → planets; see tokens.css for the individual delays. */
@@ -130,6 +132,8 @@ function RevealView({
   const [playing, setPlaying] = useState(() => revealed !== null && animate && !reduced);
   const [stagePlays, setStagePlays] = useState(true);
   const [announcement, setAnnouncement] = useState("");
+  const [continuing, setContinuing] = useState(false);
+  const [continueError, setContinueError] = useState<string | null>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const summaryRef = useRef<HTMLHeadingElement>(null);
   const waitRef = useRef<HTMLParagraphElement>(null);
@@ -175,6 +179,22 @@ function RevealView({
   useEffect(() => {
     if (meReady && pressedContinue.current) waitRef.current?.focus();
   }, [meReady]);
+
+  const continueRound = async () => {
+    if (continuing) return;
+    pressedContinue.current = true;
+    setContinueError(null);
+    const pending = onContinue?.();
+    if (!pending) return;
+    setContinuing(true);
+    try {
+      await pending;
+    } catch (err) {
+      setContinueError(errorCopy(err, "continue"));
+    } finally {
+      setContinuing(false);
+    }
+  };
 
   const pairMode = revealed ? "result" : status.kind === "failed" || status.kind === "exhausted" ? "paused" : "analyzing";
   const kind = revealed ? unknownKind(revealed.result) : null;
@@ -323,13 +343,19 @@ function RevealView({
                   <button
                     className="rv-btn rv-btn--primary"
                     type="button"
-                    onClick={() => {
-                      pressedContinue.current = true;
-                      onContinue?.();
-                    }}
+                    aria-busy={continuing || undefined}
+                    aria-disabled={continuing || undefined}
+                    onClick={() => void continueRound()}
                   >
-                    {roundIndex === 3 ? "See the full game" : "Next round"}
+                    {continuing ? <span className="rv-spin" aria-hidden="true" /> : null}
+                    {continuing ? "One moment" : roundIndex === 3 ? "See the full game" : "Next round"}
                   </button>
+                  {continueError ? (
+                    <p className="rv-error" role="alert">
+                      <WarnIcon />
+                      <span>{continueError}</span>
+                    </p>
+                  ) : null}
                 </>
               )}
             </div>

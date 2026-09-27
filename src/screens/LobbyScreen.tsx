@@ -76,9 +76,9 @@ export function LobbyScreen({ joinCode, players, viewerSlot, onStart }: LobbyScr
               <p className="sc-copied" role="status">{message ? <CheckIcon /> : null}{message}</p>
             </div>
           </>
-        ) : (
+        ) : isHost ? (
           <p className="sc-small">The room code isn't available on this screen right now.</p>
-        )}
+        ) : null}
         <p className="sc-small sc-center">Rooms stay open for 24 hours. Each room holds two people.</p>
         <section className="sc-players" aria-label="Players">
           {row("A", a)}

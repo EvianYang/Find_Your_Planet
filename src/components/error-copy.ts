@@ -17,7 +17,8 @@ export function errorCodeOf(error: unknown): ApiErrorCode | null {
   return parsed.success ? parsed.data : null;
 }
 
-export type ErrorContext = "identity" | "create" | "join" | "recover" | "rotate" | "start" | "submit" | "save" | "records" | "delete";
+export type ErrorContext =
+  | "identity" | "create" | "join" | "recover" | "rotate" | "room" | "start" | "submit" | "continue" | "save" | "records" | "delete";
 
 const GENERIC = "Something went wrong. Please try again.";
 
@@ -31,15 +32,25 @@ export function errorCopy(error: unknown, context: ErrorContext): string {
         ? "This room has closed, so this game can't be saved anymore."
         : "This room has closed. Ask your partner to start a new one.";
     case "NOT_FOUND":
-      return context === "join" ? "We couldn't find that room. Check the code, or ask for a new invite." : GENERIC;
+      return context === "join"
+        ? "We couldn't find that room. Check the code, or ask for a new invite."
+        : context === "room"
+          ? "We couldn't find this room."
+          : GENERIC;
     case "INVALID_PHASE":
-      return context === "join" ? "This game has already started." : context === "start" ? "Couldn't start the game. Try again." : GENERIC;
+      return context === "join"
+        ? "This game has already started."
+        : context === "start"
+          ? "Couldn't start the game. Try again."
+          : context === "continue"
+            ? "The game has already moved on."
+            : GENERIC;
     case "RATE_LIMITED":
       return "Too many tries. Please wait 15 minutes and try again.";
     case "RECOVERY_FAILED":
       return "That code didn't work. Check it and try again.";
     case "RECOVERY_TARGET_NOT_EMPTY":
-      return "This browser already has saved encounters. Open a private window or another browser to restore.";
+      return "This browser has already played as someone else. Open a private window or another browser to restore.";
     case "UNAUTHORIZED":
     case "IDENTITY_REPLACED":
       return "This browser no longer has access. Restore with your recovery code.";
@@ -50,6 +61,15 @@ export function errorCopy(error: unknown, context: ErrorContext): string {
     default:
       return code === null && context !== "records" ? "Couldn't connect. Check your connection and try again." : GENERIC;
   }
+}
+
+/** Reads the envelope's `retryable` flag when the service layer passes it through; null when it isn't available. */
+export function retryableOf(error: unknown): boolean | null {
+  if (typeof error === "object" && error !== null && "retryable" in error) {
+    const value = (error as { retryable: unknown }).retryable;
+    if (typeof value === "boolean") return value;
+  }
+  return null;
 }
 
 /** Unicode-aware helpers shared by the forms (limits come from CONTRACTS §2). */

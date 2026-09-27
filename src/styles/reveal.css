@@ -76,6 +76,8 @@
 .rv-btn--secondary { background: transparent; color: var(--fyp-ink); border: 1px solid var(--fyp-line-strong); }
 .rv-btn[aria-disabled="true"] { cursor: progress; opacity: 0.82; }
 .rv-spin { width: 16px; height: 16px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: fyp-rv-spin 0.9s linear infinite; }
+.rv-error { margin: 0; display: flex; gap: 8px; align-items: flex-start; justify-content: center; font-size: 14px; line-height: 21px; color: var(--fyp-warn); text-align: left; }
+.rv-error svg { flex: none; width: 16px; height: 16px; margin-top: 2px; }
 .rv-hint,
 .rv-wait { margin: 0; display: flex; align-items: center; justify-content: center; gap: 10px; text-align: center; flex-wrap: wrap; }
 .rv-hint { font-size: 13px; line-height: 20px; color: var(--fyp-muted); }
