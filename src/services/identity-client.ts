@@ -1,4 +1,4 @@
-import type { User } from "@supabase/supabase-js";
+import { FunctionsHttpError, type User } from "@supabase/supabase-js";
 
 import {
   IdentityDataResponseSchema,
@@ -8,14 +8,21 @@ import {
 } from "@contracts/identity.ts";
 
 import { getSupabaseClient } from "./supabase-client.ts";
+import { throwApiClientError } from "./api-client-error.ts";
+
+async function readFunctionPayload(data: unknown, error: unknown): Promise<unknown> {
+  if (!error) return data;
+  if (error instanceof FunctionsHttpError) return error.context.json();
+  throw error;
+}
 
 function requireAnonymousUser(user: User | null): User {
   if (!user) {
-    throw new Error("Supabase 未返回用户身份。");
+    throw new Error("Supabase did not return a user identity.");
   }
 
   if (!user.is_anonymous) {
-    throw new Error("当前 Supabase session 不是匿名身份。");
+    throw new Error("The current Supabase session is not anonymous.");
   }
 
   return user;
@@ -33,7 +40,7 @@ export async function ensureAnonymousUser(): Promise<User> {
   } = await supabase.auth.getSession();
 
   if (sessionError) {
-    throw new Error(`读取 Supabase session 失败：${sessionError.message}`);
+    throw new Error(`Could not read the Supabase session: ${sessionError.message}`);
   }
 
   if (session) {
@@ -43,7 +50,7 @@ export async function ensureAnonymousUser(): Promise<User> {
     } = await supabase.auth.getUser();
 
     if (userError) {
-      throw new Error(`验证 Supabase 用户失败：${userError.message}`);
+      throw new Error(`Could not verify the Supabase user: ${userError.message}`);
     }
 
     return requireAnonymousUser(user);
@@ -52,7 +59,7 @@ export async function ensureAnonymousUser(): Promise<User> {
   const { data, error } = await supabase.auth.signInAnonymously();
 
   if (error) {
-    throw new Error(`Supabase 匿名登录失败：${error.message}`);
+    throw new Error(`Anonymous sign-in failed: ${error.message}`);
   }
 
   return requireAnonymousUser(data.user);
@@ -64,13 +71,11 @@ export async function getIdentityProfile(): Promise<IdentityProfile | null> {
     body: { action: "me" },
   });
 
-  if (error) {
-    throw new Error(`读取 profile 失败：${error.message}`);
-  }
-
-  const response = IdentityMeResponseSchema.parse(data);
+  const response = IdentityMeResponseSchema.parse(
+    await readFunctionPayload(data, error),
+  );
   if (response.error) {
-    throw new Error(`${response.error.code}: ${response.error.message}`);
+    throwApiClientError(response.error);
   }
 
   return response.data.profile;
@@ -79,6 +84,7 @@ export async function getIdentityProfile(): Promise<IdentityProfile | null> {
 export async function createIdentityProfile(
   nickname: string,
 ): Promise<IdentityData> {
+  await ensureAnonymousUser();
   const supabase = getSupabaseClient();
   const { data, error } = await supabase.functions.invoke("identity", {
     body: {
@@ -88,15 +94,49 @@ export async function createIdentityProfile(
     },
   });
 
-  if (error) {
-    throw new Error(`创建 profile 失败：${error.message}`);
-  }
-
-  const response = IdentityDataResponseSchema.parse(data);
+  const response = IdentityDataResponseSchema.parse(
+    await readFunctionPayload(data, error),
+  );
   if (response.error) {
-    throw new Error(`${response.error.code}: ${response.error.message}`);
+    throwApiClientError(response.error);
   }
 
+  return response.data;
+}
+
+export async function recoverIdentityProfile(
+  recoveryCode: string,
+  requestId = crypto.randomUUID(),
+): Promise<IdentityData> {
+  await ensureAnonymousUser();
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase.functions.invoke("identity", {
+    body: { action: "recover", recoveryCode, requestId },
+  });
+  const response = IdentityDataResponseSchema.parse(
+    await readFunctionPayload(data, error),
+  );
+  if (response.error) {
+    throwApiClientError(response.error);
+  }
+  await supabase.removeAllChannels();
+  return response.data;
+}
+
+export async function rotateRecoveryCode(
+  requestId = crypto.randomUUID(),
+): Promise<IdentityData> {
+  await ensureAnonymousUser();
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase.functions.invoke("identity", {
+    body: { action: "rotate_recovery", requestId },
+  });
+  const response = IdentityDataResponseSchema.parse(
+    await readFunctionPayload(data, error),
+  );
+  if (response.error) {
+    throwApiClientError(response.error);
+  }
   return response.data;
 }
 
@@ -106,11 +146,11 @@ export async function verifyDirectProfileReadIsDenied(): Promise<void> {
 
   if (!error) {
     throw new Error(
-      "权限验证失败：浏览器能够直接读取 profiles，请立即检查 grants 和 RLS。",
+      "Permission check failed: the browser can read profiles directly. Check grants and RLS immediately.",
     );
   }
 
   if (error.code !== "42501") {
-    throw new Error(`直接读取被拒，但返回了非预期错误：${error.code}`);
+    throw new Error(`Direct access was denied with an unexpected error code: ${error.code}`);
   }
 }

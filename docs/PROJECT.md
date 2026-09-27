@@ -1,6 +1,6 @@
 # Find Your Planet
 
-**两颗星之间的距离，两颗心之间的距离。**
+**The distance between two stars. The distance between two hearts.**
 
 状态：产品与开发规划、目录骨架已整理，应用尚未实现。版本：2026-09-25。日常进度由 [Notion：Find Your Planet — Development Checklist](https://app.notion.com/p/3e7d830fac0481c8bf0ef203ac15c27e?pvs=204)管理，不能把本文中的计划当成已完成的功能。
 
@@ -33,6 +33,20 @@ Find Your Planet 是一个双人 AI 社交小游戏。两个人回答同样的�
 
 第一版人工准备 39 道题：13 个方向各 3 道。房间等待时尝试生成 2 道 AI 新题，检查后混入本局题池，随机抽三道不重复题。没有必须出现 AI 题的配额；开始时新题未准备好就用人工题，不耽误开局。开局后题目不再替换。
 
+首批人工题目草案（供 A/C 试玩后调整，不是题型限制）：
+
+1. If the world could have one more color, where would you want it to appear?
+2. Once a day, you can move anything two centimeters to the left. What would you move first?
+3. A moment of silence can fit inside a suitcase. Where would you take it?
+4. The Moon suddenly displays “Storage full.” What do you think is stored inside?
+5. A road that did not exist yesterday appears outside your home. Where does it lead?
+6. If you could add one instruction to the universe’s manual, what would it say?
+7. Tomorrow, everyone’s shadow can take the day off. Where would your shadow go?
+8. You receive a receipt from the future with only one item on it. What is it?
+9. If a sound could grow into a plant, which sound would you plant?
+10. The world suddenly gains a holiday that belongs only to you. What does everyone do that day?
+11. You can place a window on anything. Where would you put it?
+12. An animal that has never seen a human mistakes you for a kind of weather. How would it describe you?
 本文档刻意不放示例题，避免人工出题和 AI 生成都往同一种意象和句式上靠。方向、出题标准、反例和生成规则见 [START_AI.md 的出题规则](START_AI.md#出题规则)。
 
 ## AI 为什么不可替代

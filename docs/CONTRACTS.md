@@ -17,7 +17,7 @@ B 维护游戏/身份/记录结构、事务、接口和前端接线；C 维护�
 - `Prompt = {id, text, source: "curated" | "generated", version}`。
 - 昵称去首尾空白后 1–20 个 Unicode code points；答案 1–300 个；题目 1–180 个。空白无效，不因答案短自动判低分。
 
-lobby：两人加入且房主 start → answering。answering：双方提交 → evaluating。evaluating：有效结果（包括 insufficient）保存 → reveal。reveal：双方继续 → 下一轮 answering；第 3 轮继续 → finished。技术失败保留 evaluating 并提供重试，不能当成线索不足。没有 predicting 阶段。
+lobby：两人加入且房主 start → answering。answering：双方提交 → evaluating。evaluating：有效结果（包括 insufficient）保存 → reveal。reveal：双方继续 → 下一轮 answering；第 3 轮继续 → finished。技术失败保留 evaluating 并提供重试，不能当成线索不足；重试耗尽后不产生 distance，页面显示错误并允许玩家在本地退出当前房间，不删除 participant 或新增服务端 leave 操作。没有 predicting 阶段。
 
 本轮提交后不可编辑；不同局重新提交新答案。双方必须提交才揭晓。断开不自动判负、不自动换人、不跳题；重连读取快照。未提交草稿只保留当前页面内存，刷新提示可能丢失。
 
@@ -59,7 +59,7 @@ lobby：两人加入且房主 start → answering。answering：双方提交 →
 | identity / recover | recoveryCode, requestId | 恢复 profile，换发新码 |
 | identity / rotate_recovery | requestId | 当前身份的新找回码 |
 | game / create | requestId | roomId, joinCode；占 A 槽位 |
-| game / join | joinCode, requestId | roomId；已加入幂等返回，第三人 ROOM_FULL |
+| game / join | joinCode, requestId | roomId；房间码规范化为 8 位 `ABCDEFGHJKLMNPQRSTUVWXYZ23456789`，输入可忽略空格和连字号；已加入幂等返回，第三人 ROOM_FULL |
 | game / prepare_prompts | roomId | 仅 lobby；一次有界的新题尝试，返回处理状态 |
 | game / start | roomId, requestId | 房主且两人齐；抽三题后快照 |
 | game / snapshot | roomId | 按身份和阶段脱敏快照 |
@@ -72,7 +72,7 @@ lobby：两人加入且房主 start → answering。answering：双方提交 →
 
 错误码至少覆盖 INVALID_INPUT、UNAUTHORIZED、IDENTITY_REPLACED、NOT_FOUND、ROOM_FULL、INVALID_PHASE、CONFLICT、EXPIRED、RATE_LIMITED、EVALUATION_FAILED、RECOVERY_FAILED、RECOVERY_TARGET_NOT_EMPTY。非成员访问返回统一 NOT_FOUND，不泄露房间内容。
 
-Snapshot：roomId、phase、currentRound、revision、players（slot/nickname）、currentPrompt、ownAnswer、submitted（a/b）、continued（a/b）、evaluationState、revealedRounds、overall。ownAnswer 未提交为 null；揭晓前没有对方文本和中间评估。revealedRounds 中每项包含 roundIndex、prompt、answers（a/b）和 result；仅已揭晓轮次出现。overall 在 finished 才出现。恢复身份以稳定 profile_id 识别原来的槽位。
+Snapshot：roomId、viewerSlot、joinCode、phase、currentRound、revision、players（slot/nickname）、currentPrompt、ownAnswer、submitted（a/b）、continued（a/b）、evaluationState、evaluationRetriesRemaining、revealedRounds、overall。joinCode 仅对房主返回，加入者为 null；evaluationRetriesRemaining 为当前轮剩余手动重试次数，lobby 时为 null。ownAnswer 未提交为 null；揭晓前没有对方文本和中间评估。revealedRounds 中每项包含 roundIndex、prompt、answers（a/b）和 result；仅已揭晓轮次出现。overall 在 finished 才出现。恢复身份以稳定 profile_id 识别原来的槽位。
 
 ## 6. 题池与新题竞态
 
@@ -148,7 +148,7 @@ type ModelComparison = {
 
 创建/加入/start/submit/continue/save/recover 使用服务端事务及约束；同房操作统一先锁 room 再 round，避免不同锁顺序。第三人不能通过同时加入挤入。重复同一提交返回已保存结果；同轮提交不同内容返回 CONFLICT，不能覆盖。
 
-评估通过条件更新发放 claim_token 和 60 秒租约。模型每次 20 秒上限，自动重试最多一次；失败后手动重试最多两次并受请求限流。旧 token 迟到不能发布，结果一旦发布不重算；平台运行时间预算必须先验证。拒答、结构无效、证据校验失败是技术失败，不等于 insufficient。
+评估通过条件更新发放 claim_token 和 60 秒租约。模型每次 20 秒上限，自动重试最多一次；失败后手动重试最多两次并受请求限流。开始评估、手动重试、标记失败和发布结果均递增 room revision，使另一台设备重拉 snapshot。旧 token 迟到不能发布，结果一旦发布不重算；平台运行时间预算必须先验证。拒答、结构无效、证据校验失败是技术失败，不等于 insufficient。
 
 浏览器只允许读取并订阅 rooms 的公开列（id、phase、current_round、revision、expires_at），且必须经过成员 RLS。其余业务表与 rooms 私密字段无浏览器读取权限，所有写入走接口。每次提交、继续、结果落库递增 revision；订阅只负责通知，再拉脱敏 snapshot。旧 revision 的响应丢弃，回前台或重连立即拉取，实时连接失效时活跃页面每 3 秒轮询，后台暂停。
 

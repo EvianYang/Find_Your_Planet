@@ -2,6 +2,7 @@ import { z } from "zod";
 import { RoundResultSchema } from "./evaluation.ts";
 
 import {
+  createApiResponseSchema,
   RequestIdSchema,
   UtcDateTimeSchema,
   UuidSchema,
@@ -15,13 +16,22 @@ const trimmedUnicodeString = (label: string, maxLength: number) =>
     .pipe(
       z
         .string()
-        .min(1, `${label}不能为空`)
+        .min(1, `${label} cannot be empty.`)
         .refine((value) => unicodeLength(value) <= maxLength, {
-          message: `${label}不能超过 ${maxLength} 个 Unicode 字符`,
+          message: `${label} cannot exceed ${maxLength} Unicode characters.`,
         }),
     );
 
 export const SlotSchema = z.enum(["A", "B"]);
+const joinCodePattern = /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{8}$/;
+export const JoinCodeSchema = z.string().regex(
+  joinCodePattern,
+  "Room code must contain exactly 8 valid characters.",
+);
+export const JoinCodeInputSchema = z
+  .string()
+  .transform((value) => value.replace(/[\s-]/g, "").toUpperCase())
+  .pipe(JoinCodeSchema);
 export const PhaseSchema = z.enum([
   "lobby",
   "answering",
@@ -40,9 +50,9 @@ export const RoundIndexSchema = z.union([
   z.literal(2),
   z.literal(3),
 ]);
-export const NicknameSchema = trimmedUnicodeString("昵称", 20);
-export const AnswerSchema = trimmedUnicodeString("答案", 300);
-export const PromptTextSchema = trimmedUnicodeString("题目", 180);
+export const NicknameSchema = trimmedUnicodeString("Nickname", 20);
+export const AnswerSchema = trimmedUnicodeString("Answer", 300);
+export const PromptTextSchema = trimmedUnicodeString("Prompt", 180);
 
 export const PromptSchema = z
   .object({
@@ -99,6 +109,8 @@ export const RevealedRoundBaseSchema = z
 export const GameSnapshotBaseSchema = z
   .object({
     roomId: UuidSchema,
+    viewerSlot: SlotSchema,
+    joinCode: JoinCodeSchema.nullable(),
     phase: PhaseSchema,
     currentRound: CurrentRoundSchema,
     revision: z.number().int().nonnegative(),
@@ -109,6 +121,7 @@ export const GameSnapshotBaseSchema = z
     submitted: SubmissionFlagsSchema,
     continued: ContinuedFlagsSchema,
     evaluationState: EvaluationStateSchema,
+    evaluationRetriesRemaining: z.number().int().min(0).max(2).nullable(),
     overall: OverallResultSchema.nullable(),
   })
   .strict();
@@ -134,7 +147,7 @@ export const GameRequestSchema = z.discriminatedUnion("action", [
   z
     .object({
       action: z.literal("join"),
-      joinCode: z.string().trim().min(1).max(32),
+      joinCode: JoinCodeInputSchema,
       requestId: RequestIdSchema,
     })
     .strict(),
@@ -153,8 +166,16 @@ export const GameRequestSchema = z.discriminatedUnion("action", [
 ]);
 
 export const RoomCreatedSchema = z
-  .object({ roomId: UuidSchema, joinCode: z.string().min(1).max(32) })
+  .object({ roomId: UuidSchema, joinCode: JoinCodeSchema })
   .strict();
+
+export const RoomJoinedSchema = z.object({ roomId: UuidSchema }).strict();
+export const RoomCreatedResponseSchema = createApiResponseSchema(
+  RoomCreatedSchema,
+);
+export const RoomJoinedResponseSchema = createApiResponseSchema(
+  RoomJoinedSchema,
+);
 
 export type Slot = z.infer<typeof SlotSchema>;
 export type Phase = z.infer<typeof PhaseSchema>;
@@ -167,4 +188,9 @@ export type GameRequest = z.infer<typeof GameRequestSchema>;
 
 // Final shared boundary: browser and server consume the same evaluated snapshot.
 export const GameSnapshotSchema = createGameSnapshotSchema(RoundResultSchema);
+export const GameSnapshotResponseSchema = createApiResponseSchema(
+  GameSnapshotSchema,
+);
 export type GameSnapshot = z.infer<typeof GameSnapshotSchema>;
+export type RoomCreated = z.infer<typeof RoomCreatedSchema>;
+export type RoomJoined = z.infer<typeof RoomJoinedSchema>;
