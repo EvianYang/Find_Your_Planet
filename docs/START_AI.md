@@ -13,7 +13,7 @@ Find Your Planet 是英文网站。题目、AI 解读字段和用户可见报错
 
 ## 第一个交付：前端能用的样例与评估定义
 
-1. 按下方“出题规则”写 39 道英文人工题（13 个方向各 3 道）放进 `_shared/content/prompts.ts`，提供稳定 ID/版本，和 A 试玩审阅。
+1. 按下方“出题规则”写英文人工题放进 `_shared/content/prompts.ts`，提供稳定 ID/版本，和 A 试玩审阅。现为 curated-v3，45 道。
 2. 根据 CONTRACTS 在 `_shared/contracts/evaluation.ts` 建立 Zod schema，由 schema 推导类型。先和 B 确认共用依赖。
 3. 在 `src/fixtures/round-results.ts` 提供接近、有差异、未知和技术失败的静态样例，全部标记为演示数据。有效样例覆盖近、中、远。
 4. 检查证据逐字属于正确答案；成功样例通过 schema，技术失败使用约定的错误结构，而不是伪造一个未知成功结果。
@@ -41,6 +41,11 @@ B 调用这个函数并管理房间、租约和结果持久化；你不自行更
 - 问题能往多个方向走：同一道题可以答得务实、好笑、感伤或哲学，答案是一个小故事或一个理由，而不只是一个名词或数字。
 - 没有标准答案：老师能给答案打分的题就不是好题。
 - 风格不设限：荒诞、温柔、奇怪、好笑、日常都可以。两个人的答案可能很近，也可能很远，不应该必然很远。
+- 有取舍：让答案在两样大家都珍视的东西之间选（例如真相与安宁、被理解与被喜欢、现在与以后、自己与别人），思维方式和价值倾向才会露出来。解读看的正是这两点。
+- 设定是镜头：奇幻设定的作用是把抽象的价值问题变具体、变新鲜（例如“能测出兼容性的机器”，本质是想知道与愿意信任之间的取舍）。给超能力时最好附一个代价或限制（例如“只在没人看的时候有效”“得到一种能力就要放弃一种”）。
+- 问法比设定更要紧：后半句要让人自然说出“因为……”。不要问成列清单或报简历（反例：“people trade skills instead. What would you offer?”），也不要只能答一个名词、歌名或数字。
+- 两边都说得通：不引导，不暗示哪边是对的。
+- 价值与人生争论题可以从经验出发；Big Debates 只问一句，不加附加问题。可以从真人写过的经典问题获得灵感再改编，但不直接照搬经典哲学题（例如忒修斯之船）。
 
 ### 要避免
 
@@ -57,7 +62,7 @@ B 调用这个函数并管理房间、租约和结果持久化；你不自行更
 
 ### 方向
 
-第一版人工题库按下列 13 个方向各写 3 道。AI 新题也用它们分散方向，但这不是限定清单：可以超出、可以混搭，以后可以增加方向。
+人工题库按下列方向组织，每个方向题数不等（curated-v3 共 45 道，每个方向 2–5 道）。AI 新题也用这 15 个方向分散方向（见 `generation-prompt.ts`），这不是限定清单：可以超出、可以混搭，以后可以增加方向。
 
 1. Weird Powers：奇怪或没用的超能力
 2. Would You Rather：荒诞二选一
@@ -66,12 +71,25 @@ B 调用这个函数并管理房间、租约和结果持久化；你不自行更
 5. Sensory Swap：通感、自由联想
 6. Invent It：发明与设计
 7. You're Suddenly…：身份或处境突变
-8. Mundane Magic：日常物件活了
+8. One Message：跨越人、地点或年代的一句话
 9. Perspective Flip：换视角看你或看世界
 10. Absurd Debates：没有正确答案的杠精辩论
 11. Fill the Story：补全故事
-12. Tiny Rules：微小规则改变
+12. New Rules：改变世界规则，落到你的选择
 13. Hot Takes：离谱观点
+14. Big Debates：人生里没有标准答案的经典争论，只问一句，不加附加问题
+15. Would You, Really?：有真实代价的价值取舍，落到你自己身上
+
+### 备用题（未入库）
+
+curated-v3 讨论时留下、以后换题可直接用：
+
+- Nature or nurture: which one made you more of who you are today?
+- Is it better to have loved and lost than never to have loved at all?
+- Is a small kind lie ever better than the honest truth?
+- Would you rather know how your life ends, or how it would have gone if you'd made one different choice?
+- Is it braver to stay or to leave? When have you done the braver one?
+- You can erase one argument from both people's memories. Would you? If so, which one?
 
 ### AI 新题生成
 

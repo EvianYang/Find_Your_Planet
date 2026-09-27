@@ -44,7 +44,9 @@ test("mixing has no fixed old/new quota and samples without replacement", () => 
     generated("generated-a", "You may rewrite one law of time. What changes?"),
     generated("generated-b", "A doorway opens into any era. Where do you step?"),
   ];
-  const values = [39 / 41, 39 / 40, 0];
+  // Pool order is curated then generated, so these picks land on the two generated prompts.
+  const curatedCount = CURATED_PROMPTS.length;
+  const values = [curatedCount / (curatedCount + 2), curatedCount / (curatedCount + 1), 0];
   const withTwoNew = selectGamePrompts({ generatedCandidates: fresh, random: () => values.shift()! });
   assert.deepEqual(withTwoNew.prompts.map((prompt) => prompt.source), ["generated", "generated", "curated"]);
   assert.equal(new Set(withTwoNew.prompts.map((prompt) => prompt.id)).size, 3);

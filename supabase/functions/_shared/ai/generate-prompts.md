@@ -33,6 +33,8 @@
 | Fill the Story | Completing one concrete, unfinished story moment |
 | New Rules | A change to the rules of the world, grounded in your choice |
 | Hot Takes | An unusual opinion about something concrete |
+| Big Debates | A classic life debate with no right answer, asked as one short question with no add-on |
+| Would You, Really? | A value trade-off with a real personal cost, where neither option is the obvious right one |
 | Unspecified | Choose any imaginative direction; avoid repeating the other question's approach |
 
 方向是灵感提示，不要求模型在题目中写出分类名，也不限制后续增加或混合方向。
@@ -53,6 +55,7 @@ Question-writing rules:
 - Allow an intuitive response within ten seconds, with room for different practical, funny, emotional, or philosophical answers.
 - Do not assume the reader accepts an offer or wants to use a power. When appropriate, ask "Would you? If so, where/who?" rather than assuming a choice with "Who do you pick?" These connected questions may express one decision.
 - Make choices concrete and meaningful; avoid vague premises or unexplained stakes.
+- Build in a real trade-off between two things people value, so the answer shows how the reader thinks or what they care about. The premise is a lens; the ask should draw out a reason, not a list, a resume, or a single noun.
 - Vary sentence structure, tone, and imagery across the pair. Directions are inspiration, not category labels to print.
 
 Avoid:
