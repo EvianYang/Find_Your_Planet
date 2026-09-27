@@ -98,3 +98,18 @@ test("shared snapshot embeds final result; collection whitelist rejects evidence
   assert.ok(SavedRoundSnapshotSchema.safeParse(saved).success);
   assert.equal(SavedRoundSnapshotSchema.safeParse({ ...saved, evidence: ["private"] }).success, false);
 });
+
+test("prepare_prompts responses carry only the attempt state, never candidates", async () => {
+  const { PromptGenerationResponseSchema, GameRequestSchema: Requests } = await import("../../supabase/functions/_shared/contracts/game.ts");
+  for (const status of ["processing", "ready", "empty", "failed", "discarded"]) {
+    assert.ok(PromptGenerationResponseSchema.safeParse({ data: { status }, error: null, requestId: id }).success, status);
+  }
+  for (const data of [{ status: "done" }, { status: "ready", candidates: [] }, { status: "ready", prompts: ["Q?"] }, {}]) {
+    assert.equal(PromptGenerationResponseSchema.safeParse({ data, error: null, requestId: id }).success, false);
+  }
+  assert.ok(Requests.safeParse({ action: "prepare_prompts", roomId: id }).success);
+  // Clients cannot supply questions, directions or a model.
+  for (const extra of [{ prompts: [] }, { direction: "Hot Takes" }, { model: "x" }]) {
+    assert.equal(Requests.safeParse({ action: "prepare_prompts", roomId: id, ...extra }).success, false);
+  }
+});

@@ -2,6 +2,9 @@ import { z } from "zod";
 import { EVIDENCE_MAX, INTERPRETATION_MAX, LIST_ITEM_MAX } from "../contracts/evaluation.ts";
 import { EvaluationError } from "./evaluate-pair.ts";
 import type { ComparisonProvider } from "./evaluate-pair.ts";
+import { generatedQuestionsSchema } from "./generate-prompts.ts";
+import type { QuestionGenerator } from "./generate-prompts.ts";
+import { PROMPT_TEXT_MAX } from "../contracts/game.ts";
 
 const ResponseSchema = z.object({
   status: z.literal("completed"),
@@ -37,32 +40,86 @@ export function withComparisonTextLimits(schema: Record<string, unknown>): Recor
   return copy;
 }
 
-/** Server-only. Credentials are supplied by the caller and never logged. */
-export function createOpenAIProvider(config: { apiKey: string; model: string }, transport: typeof fetch = fetch): ComparisonProvider {
+type OpenAIConfig = { apiKey: string; model: string };
+
+/** One Responses API call with a strict JSON schema; returns the decoded JSON or throws a sanitized error. */
+async function requestStructuredJson(config: OpenAIConfig, transport: typeof fetch, request: {
+  instructions: string;
+  user: string;
+  schemaName: string;
+  schema: Record<string, unknown>;
+  effort: "low" | "medium";
+  maxOutputTokens: number;
+  signal: AbortSignal;
+}): Promise<unknown> {
+  const response = await transport("https://api.openai.com/v1/responses", {
+    method: "POST", redirect: "error", signal: request.signal,
+    headers: { Authorization: `Bearer ${config.apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: config.model, store: false,
+      instructions: request.instructions,
+      input: [{ role: "user", content: request.user }],
+      reasoning: { effort: request.effort }, max_output_tokens: request.maxOutputTokens,
+      text: { format: { type: "json_schema", name: request.schemaName, strict: true, schema: request.schema } },
+    }),
+  });
+  if (!response.ok) throw new EvaluationError("PROVIDER_ERROR");
+  const envelope = ResponseSchema.safeParse(await response.json());
+  if (!envelope.success) throw new EvaluationError("PROVIDER_ERROR");
+  const contents = envelope.data.output.flatMap((item) => item.type === "message" ? item.content ?? [] : []);
+  if (contents.some((item) => item.type === "refusal")) throw new EvaluationError("PROVIDER_ERROR");
+  const texts = contents.filter((item) => item.type === "output_text");
+  if (texts.length !== 1 || typeof texts[0].text !== "string") throw new EvaluationError("INVALID_OUTPUT");
+  try { return JSON.parse(texts[0].text) as unknown; }
+  catch { throw new EvaluationError("INVALID_OUTPUT"); }
+}
+
+function requireConfig(config: OpenAIConfig): void {
   if (!config.apiKey.trim() || !config.model.trim()) throw new EvaluationError("INVALID_CONFIGURATION");
+}
+
+/** Server-only answer comparison. Credentials are supplied by the caller and never logged. */
+export function createOpenAIProvider(config: OpenAIConfig, transport: typeof fetch = fetch): ComparisonProvider {
+  requireConfig(config);
   return {
     modelId: config.model,
-    async compare(request) {
-      const response = await transport("https://api.openai.com/v1/responses", {
-        method: "POST", redirect: "error", signal: request.signal,
-        headers: { Authorization: `Bearer ${config.apiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: config.model, store: false,
-          instructions: request.system,
-          input: [{ role: "user", content: request.user }],
-          reasoning: { effort: "medium" }, max_output_tokens: 5000,
-          text: { format: { type: "json_schema", name: "pair_comparison", strict: true, schema: withComparisonTextLimits(request.jsonSchema) } },
-        }),
+    compare(request) {
+      return requestStructuredJson(config, transport, {
+        instructions: request.system,
+        user: request.user,
+        schemaName: "pair_comparison",
+        schema: withComparisonTextLimits(request.jsonSchema),
+        effort: "medium",
+        maxOutputTokens: 5000,
+        signal: request.signal,
       });
-      if (!response.ok) throw new EvaluationError("PROVIDER_ERROR");
-      const envelope = ResponseSchema.safeParse(await response.json());
-      if (!envelope.success) throw new EvaluationError("PROVIDER_ERROR");
-      const contents = envelope.data.output.flatMap((item) => item.type === "message" ? item.content ?? [] : []);
-      if (contents.some((item) => item.type === "refusal")) throw new EvaluationError("PROVIDER_ERROR");
-      const texts = contents.filter((item) => item.type === "output_text");
-      if (texts.length !== 1 || typeof texts[0].text !== "string") throw new EvaluationError("INVALID_OUTPUT");
-      try { return JSON.parse(texts[0].text) as unknown; }
-      catch { throw new EvaluationError("INVALID_OUTPUT"); }
     },
   };
+}
+
+/** Strict output shape for question generation: at most two questions, each within the prompt limit. */
+function questionGenerationSchema(): Record<string, unknown> {
+  const schema = z.toJSONSchema(generatedQuestionsSchema) as Record<string, unknown>;
+  const questions = (schema.properties as Record<string, Record<string, unknown>>).questions;
+  const text = ((questions.items as Record<string, unknown>).properties as Record<string, Record<string, unknown>>).text;
+  text.maxLength = PROMPT_TEXT_MAX;
+  return schema;
+}
+
+/**
+ * Server-only question generation for game/prepare_prompts (8-second budget, so low reasoning effort).
+ * No retries here; generatePromptCandidates owns the timeout and turns any throw into a failed attempt.
+ */
+export function createOpenAIQuestionGenerator(config: OpenAIConfig, transport: typeof fetch = fetch): QuestionGenerator {
+  requireConfig(config);
+  const schema = questionGenerationSchema();
+  return (request) => requestStructuredJson(config, transport, {
+    instructions: request.instructions,
+    user: request.user,
+    schemaName: "generated_questions",
+    schema,
+    effort: "low",
+    maxOutputTokens: 1500,
+    signal: request.signal,
+  });
 }

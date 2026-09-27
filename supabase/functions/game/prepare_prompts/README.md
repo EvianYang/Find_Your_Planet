@@ -109,3 +109,11 @@ C侧纯函数已覆盖候选检查、混池、无放回抽题和已有快照复�
 - [ ] 前端响应、订阅和日志均不泄露候选池或服务端凭证。
 
 以上场景需代码与真实集成验证后再勾选；本次文档交付不代表接口已部署或调用验收通过。
+
+## 实现（2026-09-27，待远程验收）
+
+- 数据库：`supabase/migrations/202609270010_prompt_generation.sql` 新增私有表 `room_prompt_pools`（状态 processing / ready / empty / failed / discarded、30 秒租约、0–2 道候选），以及 `claim_prompt_generation`、`finish_prompt_generation` 两个只给 service_role 的函数；二者与 `start_room` 锁同一 room 行；`start_room` 增加默认为 null 的 `p_pool_seen`，在锁内发现候选已在读取后变成 ready 时返回 POOL_CHANGED，由函数重读再抽一次（旧版函数不传该参数，行为不变）。非 lobby 的请求一律 INVALID_PHASE。rooms 上早先预留的 `prompt_candidates_json`、`prompt_generation_state` 没有使用：rooms 在 Realtime 发布里，候选放在那里可能随更新外泄。
+- `game` 函数：`prepare_prompts` 先领取，领到的一方在锁外调用 `generatePromptCandidates`（`createOpenAIQuestionGenerator`，low 推理，8 秒上限，不重试），经 `filterGeneratedPrompts` 筛选后写回；其余调用只返回已有状态。`start` 读取 ready 候选后用 `selectGamePrompts`（CSPRNG）抽题；题池读不到时只用人工题开局，不因新题失败挡住开局。响应只含 `{status}`（`PromptGenerationResponseSchema`）。
+- 前端：`src/services/game-client.ts` 的 `preparePrompts`；`src/GameApp.tsx` 在快照为 lobby 时调用一次，忽略失败。
+- 验证：本地测试覆盖生成请求体（严格结构、low 推理、不含人工题）、失败不重试和响应不含候选；三个 Edge Function 类型检查通过。数据库函数与端到端行为需部署后运行 `npm run verify:prompts`（会产生真实模型调用）。
+- 抽题不设来源配额：45 道人工题加 2 道候选时，一局含 AI 新题的概率约 12.5%。

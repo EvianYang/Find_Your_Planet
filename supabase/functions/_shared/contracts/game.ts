@@ -52,7 +52,8 @@ export const RoundIndexSchema = z.union([
 ]);
 export const NicknameSchema = trimmedUnicodeString("Nickname", 20);
 export const AnswerSchema = trimmedUnicodeString("Answer", 300);
-export const PromptTextSchema = trimmedUnicodeString("Prompt", 180);
+export const PROMPT_TEXT_MAX = 180;
+export const PromptTextSchema = trimmedUnicodeString("Prompt", PROMPT_TEXT_MAX);
 
 export const PromptSchema = z
   .object({
@@ -176,6 +177,17 @@ export const RoomCreatedResponseSchema = createApiResponseSchema(
 export const RoomJoinedResponseSchema = createApiResponseSchema(
   RoomJoinedSchema,
 );
+
+/**
+ * game/prepare_prompts: state of the room's single AI question-generation attempt. Only the state is
+ * returned, never candidates or model output. Every state is final except processing; none is retried.
+ * processing: claimed, still running · ready: candidates saved · empty: finished without usable questions ·
+ * failed: technical failure (curated questions are used) · discarded: arrived after the game started.
+ */
+export const PromptGenerationStatusSchema = z.enum(["processing", "ready", "empty", "failed", "discarded"]);
+export const PromptGenerationSchema = z.object({ status: PromptGenerationStatusSchema }).strict();
+export const PromptGenerationResponseSchema = createApiResponseSchema(PromptGenerationSchema);
+export type PromptGenerationStatus = z.infer<typeof PromptGenerationStatusSchema>;
 
 export type Slot = z.infer<typeof SlotSchema>;
 export type Phase = z.infer<typeof PhaseSchema>;

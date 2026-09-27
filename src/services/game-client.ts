@@ -2,9 +2,11 @@ import { FunctionsHttpError } from "@supabase/supabase-js";
 
 import {
   GameSnapshotResponseSchema,
+  PromptGenerationResponseSchema,
   RoomCreatedResponseSchema,
   RoomJoinedResponseSchema,
   type GameSnapshot,
+  type PromptGenerationStatus,
   type RoomCreated,
   type RoomJoined,
 } from "@contracts/game.ts";
@@ -48,6 +50,23 @@ export async function joinRoom(
     throwApiClientError(response.error);
   }
   return response.data;
+}
+
+/**
+ * game/prepare_prompts: starts, or reads, the room's single AI question-generation attempt.
+ * Optional: the start never waits for it, and a failure only means the curated questions are used.
+ */
+export async function preparePrompts(roomId: string): Promise<PromptGenerationStatus> {
+  const { data, error } = await getSupabaseClient().functions.invoke("game", {
+    body: { action: "prepare_prompts", roomId },
+  });
+  const response = PromptGenerationResponseSchema.parse(
+    error ? await readFunctionError(error) : data,
+  );
+  if (response.error) {
+    throwApiClientError(response.error);
+  }
+  return response.data.status;
 }
 
 export async function startGame(

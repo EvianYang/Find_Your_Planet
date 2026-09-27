@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { IdentityData, IdentityProfile } from "@contracts/identity.ts";
 
@@ -9,7 +9,7 @@ import { useGameSession } from "./hooks/useGameSession.ts";
 import { GameScreen, GameStatus } from "./screens/GameScreen.tsx";
 import { WelcomeScreen } from "./screens/WelcomeScreen.tsx";
 import { evaluateRound } from "./services/evaluate-client.ts";
-import { continueGame, createRoom, joinRoom, startGame, submitAnswer } from "./services/game-client.ts";
+import { continueGame, createRoom, joinRoom, preparePrompts, startGame, submitAnswer } from "./services/game-client.ts";
 import { createIdentityProfile, getIdentityProfile, recoverIdentityProfile } from "./services/identity-client.ts";
 import { getSupabaseClient } from "./services/supabase-client.ts";
 
@@ -55,6 +55,17 @@ async function loadProfile(): Promise<IdentityProfile | null> {
 
 function GameRoute({ roomId, onLeave }: { roomId: string; onLeave: () => void }) {
   const session = useGameSession(roomId);
+  const phase = session.snapshot?.phase;
+  const preparedRef = useRef(false);
+
+  // While the room waits in the lobby, ask once for a couple of fresh AI questions. The server runs a
+  // single attempt per room; the start never waits for it and a failure just means curated questions.
+  useEffect(() => {
+    if (phase !== "lobby" || preparedRef.current) return;
+    preparedRef.current = true;
+    void preparePrompts(roomId).catch(() => {});
+  }, [phase, roomId]);
+
   return (
     <GameScreen
       snapshot={session.snapshot}

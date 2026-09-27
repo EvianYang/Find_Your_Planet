@@ -250,6 +250,17 @@ shared source rate limit:
 npm run verify:recovery
 ```
 
+Tasks 3.2 and 3.3 add one AI question-generation attempt per room while it waits in
+the lobby (`game` / `prepare_prompts`). Candidates are stored in a private table, the
+start never waits for generation, and a result that arrives after the start is
+discarded. After migration `202609270010_prompt_generation.sql` and the `game`
+function are deployed with `LLM_API_KEY` and `LLM_MODEL`, run the remote check
+(it makes real, billable generation calls):
+
+```bash
+npm run verify:prompts
+```
+
 Dependencies are pinned exactly in `package.json` and `package-lock.json`. Run these commands from the existing repository root; do not create a nested project.
 
 ```text

@@ -8,11 +8,14 @@ import {
 import {
   GameRequestSchema,
   GameSnapshotSchema,
-  PromptSchema,
+  PromptGenerationStatusSchema,
   type Prompt,
+  type PromptGenerationStatus,
 } from "../_shared/contracts/game.ts";
 import { RoundResultSchema } from "../_shared/contracts/evaluation.ts";
-import { CURATED_PROMPTS } from "../_shared/content/prompts.ts";
+import { filterGeneratedPrompts, selectGamePrompts } from "../_shared/content/prompt-pool.ts";
+import { generatePromptCandidates } from "../_shared/ai/generate-prompts.ts";
+import { createOpenAIQuestionGenerator } from "../_shared/ai/openai-provider.ts";
 
 type JsonRecord = Record<string, unknown>;
 type ProfileRow = { id: string };
@@ -50,6 +53,8 @@ type RoundRow = {
 type SubmissionRow = { round_id: string; profile_id: string; body: string };
 type SubmittedRoomRow = { status: string; submitted_room_id: string | null };
 type ContinuedRoomRow = { status: string; continued_room_id: string | null };
+type StatusRow = { status: string };
+type PromptPoolRow = { state: string; candidates: unknown };
 
 const responseHeaders = {
   ...corsHeaders,
@@ -119,17 +124,43 @@ function generateJoinCode(): string {
   ).join("");
 }
 
-function selectThreePrompts(): Prompt[] {
-  const available = [...CURATED_PROMPTS];
-  const selected: Prompt[] = [];
+/** Uniform in [0, 1) from the platform CSPRNG, for selectGamePrompts. */
+function secureRandom(): number {
+  return crypto.getRandomValues(new Uint32Array(1))[0] / 4_294_967_296;
+}
 
-  while (selected.length < 3) {
-    const random = crypto.getRandomValues(new Uint32Array(1))[0];
-    const index = random % available.length;
-    selected.push(PromptSchema.parse(available.splice(index, 1)[0]));
+type GenerationOutcome = {
+  state: "ready" | "empty" | "failed";
+  candidates: Prompt[];
+  reason: string | null;
+  generated: number;
+};
+
+/**
+ * One bounded attempt (C's generator, 8-second limit, no retry) plus the local quality gate.
+ * Runs outside any database lock; the result is written back by finish_prompt_generation.
+ */
+async function generateRoomCandidates(): Promise<GenerationOutcome> {
+  let generator;
+  try {
+    generator = createOpenAIQuestionGenerator({
+      apiKey: Deno.env.get("LLM_API_KEY") ?? "",
+      model: Deno.env.get("LLM_MODEL") ?? "",
+    });
+  } catch {
+    return { state: "failed", candidates: [], reason: "configuration", generated: 0 };
   }
-
-  return selected;
+  const attempt = await generatePromptCandidates(generator);
+  if (attempt.status === "failed") {
+    return { state: "failed", candidates: [], reason: attempt.reason, generated: 0 };
+  }
+  const { accepted } = filterGeneratedPrompts(attempt.candidates);
+  return {
+    state: accepted.length > 0 ? "ready" : "empty",
+    candidates: accepted,
+    reason: null,
+    generated: attempt.candidates.length,
+  };
 }
 
 async function loadSnapshot(
@@ -356,16 +387,6 @@ Deno.serve(async (request) => {
     return failure(requestId, "INVALID_INPUT", "Game request is invalid.", false, 400);
   }
 
-  if (
-    parsedRequest.data.action !== "create" &&
-    parsedRequest.data.action !== "join" &&
-    parsedRequest.data.action !== "start" &&
-    parsedRequest.data.action !== "snapshot" &&
-    parsedRequest.data.action !== "submit" &&
-    parsedRequest.data.action !== "continue"
-  ) {
-    return failure(requestId, "INVALID_INPUT", "This game action is not implemented yet.", false, 400);
-  }
 
   const authorization = request.headers.get("Authorization");
   const accessToken = authorization?.startsWith("Bearer ")
@@ -442,18 +463,90 @@ Deno.serve(async (request) => {
       return success(requestId, { roomId: data.room_id });
     }
 
-    if (parsedRequest.data.action === "start") {
-      const { data, error } = await adminClient
-        .rpc("start_room", {
-          p_profile_id: profile.id,
-          p_room_id: parsedRequest.data.roomId,
-          p_prompts: selectThreePrompts(),
-        })
-        .single<StartedRoomRow>();
+    if (parsedRequest.data.action === "prepare_prompts") {
+      const roomId = parsedRequest.data.roomId;
+      const { data: claim, error: claimError } = await adminClient
+        .rpc("claim_prompt_generation", { p_profile_id: profile.id, p_room_id: roomId })
+        .single<StatusRow>();
 
-      if (error) throw error;
+      if (claimError) throw claimError;
+      const claimStatus = claim?.status ?? "NOT_FOUND";
+      if (claimStatus === "EXPIRED") {
+        return failure(requestId, "EXPIRED", "This room has expired.", false, 410);
+      }
+      if (claimStatus === "INVALID_PHASE") {
+        return failure(requestId, "INVALID_PHASE", "New questions can only be prepared in the lobby.", false, 409);
+      }
+      if (claimStatus !== "CLAIMED") {
+        // Already claimed by this room: report the existing state; never call the model again.
+        const existing = PromptGenerationStatusSchema.safeParse(claimStatus.toLowerCase());
+        if (!existing.success) return failure(requestId, "NOT_FOUND", "Room not found.", false, 404);
+        return success(requestId, { status: existing.data });
+      }
+
+      const startedAt = Date.now();
+      const outcome = await generateRoomCandidates();
+      const { data: finished, error: finishError } = await adminClient
+        .rpc("finish_prompt_generation", {
+          p_room_id: roomId,
+          p_state: outcome.state,
+          p_candidates: outcome.candidates,
+        })
+        .single<StatusRow>();
+
+      if (finishError) throw finishError;
+      // STALE: the lease ran out or the attempt was already ended, so nothing was saved.
+      const saved = PromptGenerationStatusSchema.safeParse((finished?.status ?? "").toLowerCase());
+      const status: PromptGenerationStatus = saved.success ? saved.data : "failed";
+      // Counts and reasons only; never question text, model output or credentials.
+      console.info(JSON.stringify({
+        requestId,
+        category: "PROMPT_GENERATION",
+        status,
+        reason: outcome.reason,
+        generated: outcome.generated,
+        accepted: outcome.candidates.length,
+        durationMs: Date.now() - startedAt,
+      }));
+      return success(requestId, { status });
+    }
+
+    if (parsedRequest.data.action === "start") {
+      const roomId = parsedRequest.data.roomId;
+      let data: StartedRoomRow | null = null;
+      // Two tries at most: POOL_CHANGED means candidates became ready after our read, and ready is final.
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        // Only saved (ready) candidates count; an attempt that is still running never delays the start.
+        const { data: pool, error: poolError } = await adminClient
+          .from("room_prompt_pools")
+          .select("state,candidates")
+          .eq("room_id", roomId)
+          .maybeSingle<PromptPoolRow>();
+        if (poolError) {
+          // New questions are optional: if the pool cannot be read, start with curated questions only.
+          console.warn(JSON.stringify({ requestId, category: "PROMPT_POOL_UNAVAILABLE" }));
+        }
+        const readyCandidates = !poolError && pool?.state === "ready" && Array.isArray(pool.candidates)
+          ? pool.candidates
+          : [];
+        const selection = selectGamePrompts({ generatedCandidates: readyCandidates, random: secureRandom });
+        const result = await adminClient
+          .rpc("start_room", {
+            p_profile_id: profile.id,
+            p_room_id: roomId,
+            p_prompts: selection.prompts,
+            // start_room re-checks the pool under the room lock it shares with the write-back.
+            ...(poolError ? {} : { p_pool_seen: pool?.state ?? "none" }),
+          })
+          .single<StartedRoomRow>();
+
+        if (result.error) throw result.error;
+        data = result.data;
+        if (data?.status !== "POOL_CHANGED") break;
+      }
+
       if (!data || data.status !== "STARTED" || !data.started_room_id) {
-        return startFailure(requestId, data?.status ?? "NOT_FOUND");
+        return startFailure(requestId, data?.status === "POOL_CHANGED" ? "INVALID_PROMPTS" : data?.status ?? "NOT_FOUND");
       }
     }
 

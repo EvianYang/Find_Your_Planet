@@ -105,7 +105,7 @@ test(
     assert.equal(started.body.data.currentRound, 1);
     assert.equal(started.body.data.players.length, 2);
     assert.equal(started.body.data.currentPrompt.source, "curated");
-    assert.equal(started.body.data.currentPrompt.version, "curated-v2");
+    assert.equal(started.body.data.currentPrompt.version, "curated-v3");
 
     const guestSnapshot = await gameRequest(guest.accessToken, {
       action: "snapshot",
