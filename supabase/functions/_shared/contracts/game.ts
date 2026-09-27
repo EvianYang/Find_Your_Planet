@@ -23,6 +23,15 @@ const trimmedUnicodeString = (label: string, maxLength: number) =>
     );
 
 export const SlotSchema = z.enum(["A", "B"]);
+const joinCodePattern = /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{8}$/;
+export const JoinCodeSchema = z.string().regex(
+  joinCodePattern,
+  "Room code must contain exactly 8 valid characters.",
+);
+export const JoinCodeInputSchema = z
+  .string()
+  .transform((value) => value.replace(/[\s-]/g, "").toUpperCase())
+  .pipe(JoinCodeSchema);
 export const PhaseSchema = z.enum([
   "lobby",
   "answering",
@@ -100,6 +109,8 @@ export const RevealedRoundBaseSchema = z
 export const GameSnapshotBaseSchema = z
   .object({
     roomId: UuidSchema,
+    viewerSlot: SlotSchema,
+    joinCode: JoinCodeSchema.nullable(),
     phase: PhaseSchema,
     currentRound: CurrentRoundSchema,
     revision: z.number().int().nonnegative(),
@@ -110,6 +121,7 @@ export const GameSnapshotBaseSchema = z
     submitted: SubmissionFlagsSchema,
     continued: ContinuedFlagsSchema,
     evaluationState: EvaluationStateSchema,
+    evaluationRetriesRemaining: z.number().int().min(0).max(2).nullable(),
     overall: OverallResultSchema.nullable(),
   })
   .strict();
@@ -135,7 +147,7 @@ export const GameRequestSchema = z.discriminatedUnion("action", [
   z
     .object({
       action: z.literal("join"),
-      joinCode: z.string().trim().min(1).max(32),
+      joinCode: JoinCodeInputSchema,
       requestId: RequestIdSchema,
     })
     .strict(),
@@ -154,7 +166,7 @@ export const GameRequestSchema = z.discriminatedUnion("action", [
 ]);
 
 export const RoomCreatedSchema = z
-  .object({ roomId: UuidSchema, joinCode: z.string().min(1).max(32) })
+  .object({ roomId: UuidSchema, joinCode: JoinCodeSchema })
   .strict();
 
 export const RoomJoinedSchema = z.object({ roomId: UuidSchema }).strict();

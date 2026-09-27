@@ -111,11 +111,36 @@ test(
       : contenderTwo;
     const repeatedJoin = await gameRequest(winningActor.accessToken, {
       action: "join",
-      joinCode: created.body.data.joinCode,
+      joinCode: `${created.body.data.joinCode.slice(0, 4)}-${created.body.data.joinCode.slice(4)}`,
       requestId: crypto.randomUUID(),
     });
     assert.equal(repeatedJoin.status, 200);
     assert.equal(repeatedJoin.body.data.roomId, created.body.data.roomId);
+
+    const hostSnapshot = await gameRequest(host.accessToken, {
+      action: "snapshot",
+      roomId: created.body.data.roomId,
+    });
+    assert.equal(hostSnapshot.status, 200, JSON.stringify(hostSnapshot.body));
+    assert.equal(hostSnapshot.body.data.viewerSlot, "A");
+    assert.equal(hostSnapshot.body.data.joinCode, created.body.data.joinCode);
+    assert.equal(hostSnapshot.body.data.evaluationRetriesRemaining, null);
+
+    const guestSnapshot = await gameRequest(winningActor.accessToken, {
+      action: "snapshot",
+      roomId: created.body.data.roomId,
+    });
+    assert.equal(guestSnapshot.status, 200, JSON.stringify(guestSnapshot.body));
+    assert.equal(guestSnapshot.body.data.viewerSlot, "B");
+    assert.equal(guestSnapshot.body.data.joinCode, null);
+
+    const invalidCode = await gameRequest(contenderTwo.accessToken, {
+      action: "join",
+      joinCode: "O0I1",
+      requestId: crypto.randomUUID(),
+    });
+    assert.equal(invalidCode.status, 400, JSON.stringify(invalidCode.body));
+    assert.equal(invalidCode.body.error.code, "INVALID_INPUT");
 
     const { error: directReadError } = await host.client
       .from("participants")

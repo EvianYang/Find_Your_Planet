@@ -106,6 +106,11 @@ test("2.6 evaluates once, persists the result and reveals only the current claim
   assert.equal(snapshot.status, 200, JSON.stringify(snapshot.body));
   assert.equal(snapshot.body.data.phase, "reveal");
   assert.equal(snapshot.body.data.evaluationState, "ready");
+  assert.equal(snapshot.body.data.evaluationRetriesRemaining, 2);
+  assert.ok(
+    snapshot.body.data.revision >= guestSubmission.body.data.revision + 2,
+    "Claiming and publishing the evaluation must each advance revision.",
+  );
   assert.equal(snapshot.body.data.revealedRounds.length, 1);
   assert.deepEqual(snapshot.body.data.revealedRounds[0].result, ready.body.data.result);
   assert.equal(snapshot.body.data.revealedRounds[0].answers.a.includes("forgotten dreams"), true);

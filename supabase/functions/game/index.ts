@@ -25,6 +25,8 @@ type JoinedRoomRow = {
 type StartedRoomRow = { status: string; started_room_id: string | null };
 type RoomRow = {
   id: string;
+  join_code: string;
+  host_profile_id: string;
   phase: string;
   current_round: number;
   revision: number;
@@ -41,6 +43,7 @@ type RoundRow = {
   prompt_json: unknown;
   result_json: unknown;
   evaluation_state: string;
+  manual_retries: number;
   continued_a: boolean;
   continued_b: boolean;
 };
@@ -139,7 +142,7 @@ async function loadSnapshot(
 > {
   const { data: room, error: roomError } = await adminClient
     .from("rooms")
-    .select("id,phase,current_round,revision,expires_at")
+    .select("id,join_code,host_profile_id,phase,current_round,revision,expires_at")
     .eq("id", roomId)
     .maybeSingle<RoomRow>();
 
@@ -154,7 +157,8 @@ async function loadSnapshot(
     .returns<ParticipantRow[]>();
 
   if (participantsError) throw participantsError;
-  if (!participants?.some((participant) => participant.profile_id === profileId)) {
+  const viewer = participants?.find((participant) => participant.profile_id === profileId);
+  if (!viewer) {
     return { ok: false, code: "NOT_FOUND" };
   }
   if (new Date(room.expires_at).getTime() <= Date.now()) {
@@ -165,7 +169,7 @@ async function loadSnapshot(
   if (room.current_round > 0) {
     const { data, error } = await adminClient
       .from("rounds")
-      .select("id,round_index,prompt_json,result_json,evaluation_state,continued_a,continued_b")
+      .select("id,round_index,prompt_json,result_json,evaluation_state,manual_retries,continued_a,continued_b")
       .eq("room_id", roomId)
       .order("round_index")
       .returns<RoundRow[]>();
@@ -198,6 +202,8 @@ async function loadSnapshot(
 
   const snapshot = GameSnapshotSchema.parse({
     roomId: room.id,
+    viewerSlot: viewer.slot,
+    joinCode: room.host_profile_id === profileId ? room.join_code : null,
     phase: room.phase,
     currentRound: room.current_round,
     revision: room.revision,
@@ -217,6 +223,9 @@ async function loadSnapshot(
       b: round?.continued_b ?? false,
     },
     evaluationState: round?.evaluation_state ?? "idle",
+    evaluationRetriesRemaining: round
+      ? Math.max(0, 2 - round.manual_retries)
+      : null,
     revealedRounds: rounds
       .filter((candidate) => candidate.evaluation_state === "ready" && candidate.result_json)
       .map((candidate) => {
@@ -418,11 +427,10 @@ Deno.serve(async (request) => {
     }
 
     if (parsedRequest.data.action === "join") {
-      const normalizedJoinCode = parsedRequest.data.joinCode.toUpperCase();
       const { data, error } = await adminClient
         .rpc("join_room", {
           p_profile_id: profile.id,
-          p_join_code: normalizedJoinCode,
+          p_join_code: parsedRequest.data.joinCode,
         })
         .single<JoinedRoomRow>();
 

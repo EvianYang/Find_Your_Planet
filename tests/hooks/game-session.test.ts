@@ -6,6 +6,8 @@ import { GameSnapshotSchema } from "../../supabase/functions/_shared/contracts/g
 
 const snapshot = (revision: number) => GameSnapshotSchema.parse({
   roomId: "a1111111-1111-4111-8111-111111111111",
+  viewerSlot: "A",
+  joinCode: "ABCDEFGH",
   phase: "answering",
   currentRound: 1,
   revision,
@@ -24,6 +26,7 @@ const snapshot = (revision: number) => GameSnapshotSchema.parse({
   submitted: { a: false, b: false },
   continued: { a: false, b: false },
   evaluationState: "idle",
+  evaluationRetriesRemaining: 2,
   revealedRounds: [],
   overall: null,
 });

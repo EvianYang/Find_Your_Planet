@@ -8,6 +8,7 @@ import {
 } from "@contracts/identity.ts";
 
 import { getSupabaseClient } from "./supabase-client.ts";
+import { throwApiClientError } from "./api-client-error.ts";
 
 async function readFunctionPayload(data: unknown, error: unknown): Promise<unknown> {
   if (!error) return data;
@@ -74,7 +75,7 @@ export async function getIdentityProfile(): Promise<IdentityProfile | null> {
     await readFunctionPayload(data, error),
   );
   if (response.error) {
-    throw new Error(`${response.error.code}: ${response.error.message}`);
+    throwApiClientError(response.error);
   }
 
   return response.data.profile;
@@ -97,7 +98,7 @@ export async function createIdentityProfile(
     await readFunctionPayload(data, error),
   );
   if (response.error) {
-    throw new Error(`${response.error.code}: ${response.error.message}`);
+    throwApiClientError(response.error);
   }
 
   return response.data;
@@ -116,7 +117,7 @@ export async function recoverIdentityProfile(
     await readFunctionPayload(data, error),
   );
   if (response.error) {
-    throw new Error(`${response.error.code}: ${response.error.message}`);
+    throwApiClientError(response.error);
   }
   await supabase.removeAllChannels();
   return response.data;
@@ -134,7 +135,7 @@ export async function rotateRecoveryCode(
     await readFunctionPayload(data, error),
   );
   if (response.error) {
-    throw new Error(`${response.error.code}: ${response.error.message}`);
+    throwApiClientError(response.error);
   }
   return response.data;
 }

@@ -64,10 +64,10 @@ test("technical failure uses error envelope, not an insufficient comparison", ()
 test("shared snapshot embeds final result; collection whitelist rejects evidence", () => {
   const prompt = { id, text: "What happens?", source: "curated", version: "v1" };
   const snapshot = {
-    roomId: id, phase: "reveal", currentRound: 1, revision: 1, expiresAt: "2026-09-27T00:00:00Z",
+    roomId: id, viewerSlot: "A", joinCode: "ABCDEFGH", phase: "reveal", currentRound: 1, revision: 1, expiresAt: "2026-09-27T00:00:00Z",
     players: [{ slot: "A", nickname: "a" }, { slot: "B", nickname: "b" }], currentPrompt: prompt,
     ownAnswer: "a", submitted: { a: true, b: true }, continued: { a: false, b: false },
-    evaluationState: "ready", overall: null,
+    evaluationState: "ready", evaluationRetriesRemaining: 2, overall: null,
     revealedRounds: [{ roundIndex: 1, prompt, answers: { a: "a", b: "b" }, result: unknown }],
   };
   assert.ok(GameSnapshotSchema.safeParse(snapshot).success);

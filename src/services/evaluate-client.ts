@@ -6,6 +6,7 @@ import {
 } from "@contracts/evaluate.ts";
 
 import { getSupabaseClient } from "./supabase-client.ts";
+import { throwApiClientError } from "./api-client-error.ts";
 
 async function readFunctionError(error: unknown): Promise<unknown> {
   if (error instanceof FunctionsHttpError) {
@@ -25,7 +26,7 @@ export async function evaluateRound(
     error ? await readFunctionError(error) : data,
   );
   if (response.error) {
-    throw new Error(`${response.error.code}: ${response.error.message}`);
+    throwApiClientError(response.error);
   }
   return response.data;
 }

@@ -10,6 +10,7 @@ import {
 } from "@contracts/game.ts";
 
 import { getSupabaseClient } from "./supabase-client.ts";
+import { throwApiClientError } from "./api-client-error.ts";
 
 async function readFunctionError(error: unknown): Promise<unknown> {
   if (error instanceof FunctionsHttpError) {
@@ -27,7 +28,7 @@ export async function createRoom(requestId = crypto.randomUUID()): Promise<RoomC
   );
 
   if (response.error) {
-    throw new Error(`${response.error.code}: ${response.error.message}`);
+    throwApiClientError(response.error);
   }
   return response.data;
 }
@@ -44,7 +45,7 @@ export async function joinRoom(
   );
 
   if (response.error) {
-    throw new Error(`${response.error.code}: ${response.error.message}`);
+    throwApiClientError(response.error);
   }
   return response.data;
 }
@@ -61,7 +62,7 @@ export async function startGame(
   );
 
   if (response.error) {
-    throw new Error(`${response.error.code}: ${response.error.message}`);
+    throwApiClientError(response.error);
   }
   return response.data;
 }
@@ -75,7 +76,7 @@ export async function getGameSnapshot(roomId: string): Promise<GameSnapshot> {
   );
 
   if (response.error) {
-    throw new Error(`${response.error.code}: ${response.error.message}`);
+    throwApiClientError(response.error);
   }
   return response.data;
 }
@@ -94,7 +95,7 @@ export async function submitAnswer(
   );
 
   if (response.error) {
-    throw new Error(`${response.error.code}: ${response.error.message}`);
+    throwApiClientError(response.error);
   }
   return response.data;
 }
@@ -111,7 +112,7 @@ export async function continueGame(
     error ? await readFunctionError(error) : data,
   );
   if (response.error) {
-    throw new Error(`${response.error.code}: ${response.error.message}`);
+    throwApiClientError(response.error);
   }
   return response.data;
 }
