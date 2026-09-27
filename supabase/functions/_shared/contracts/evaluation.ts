@@ -2,10 +2,10 @@ import { z } from "zod";
 
 /**
  * Hard limits in Unicode code points. They only stop runaway output; the comparison prompt asks for
- * much shorter text (summary/explanation about 100, list items about 90). Evidence quotes stay short.
+ * shorter text (summary under 60, explanations under 80, reading items under 160). Evidence quotes stay short.
  */
 export const INTERPRETATION_MAX = 200;
-export const LIST_ITEM_MAX = 160;
+export const LIST_ITEM_MAX = 240;
 export const EVIDENCE_MAX = 60;
 
 const boundedText = (max: number) => z.string().refine(
