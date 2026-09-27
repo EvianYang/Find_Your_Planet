@@ -10,8 +10,9 @@ import {
   PromptSchema,
   RoundIndexSchema,
 } from "./game.ts";
+import { INTERPRETATION_MAX, LIST_ITEM_MAX, RubricVersionSchema } from "./evaluation.ts";
 
-const shortTextArray = z.array(z.string().max(100)).max(2);
+const shortTextArray = z.array(z.string().max(LIST_ITEM_MAX)).max(2);
 
 export const SavedRoundSnapshotSchema = z
   .object({
@@ -19,11 +20,11 @@ export const SavedRoundSnapshotSchema = z
     prompt: PromptSchema,
     distance: z.number().int().min(0).max(1000).nullable(),
     coverage: z.number().min(0).max(1),
-    summary: z.string().max(120),
+    summary: z.string().max(INTERPRETATION_MAX),
     commonality: shortTextArray,
     divergence: shortTextArray,
     unknowns: shortTextArray,
-    rubricVersion: z.literal("fmp-v1"),
+    rubricVersion: RubricVersionSchema,
     modelId: z.string().min(1).max(100),
   })
   .strict();
@@ -38,7 +39,8 @@ export const SavedRecordSchema = z
     rounds: z.array(SavedRoundSnapshotSchema).length(3),
     overallDistance: z.number().int().min(0).max(1000).nullable(),
     validRounds: z.number().int().min(0).max(3),
-    rubricVersion: z.literal("fmp-v1"),
+    // A game played across the fmp-v2 rollout can mix versions; each round keeps its own version.
+    rubricVersion: RubricVersionSchema,
   })
   .strict();
 

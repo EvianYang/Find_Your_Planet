@@ -6,6 +6,7 @@ import "../styles/tokens.css";
 import "../styles/screens.css";
 import { AnswerCard } from "../components/AnswerCard.tsx";
 import { PlanetPair } from "../components/PlanetPair.tsx";
+import { moonLitForRounds } from "../components/planet-geometry.ts";
 import { clipUnicode, errorCopy, unicodeLength } from "../components/error-copy.ts";
 import { Button, FieldError } from "../components/ui.tsx";
 
@@ -77,6 +78,7 @@ export function AnswerScreen({ roundIndex, prompt, players, viewerSlot, ownAnswe
         mode="resting"
         nicknames={names}
         sealed={{ [slotKey(viewerSlot)]: sealed, [slotKey(partner)]: partnerSubmitted } as { a: boolean; b: boolean }}
+        moon={{ lit: moonLitForRounds(roundIndex - 1) }}
       />
       <div className="sc-sheet">
         <header className="sc-q">

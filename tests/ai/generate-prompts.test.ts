@@ -5,15 +5,15 @@ import { GENERATION_INSTRUCTIONS, GENERATION_USER_TEMPLATE, GENERATION_DIRECTION
 import { CURATED_PROMPTS } from "../../supabase/functions/_shared/content/prompts.ts";
 import { generatePromptCandidates } from "../../supabase/functions/_shared/ai/generate-prompts.ts";
 
-test("curated bank has 39 unique versioned UUID questions within limits", () => {
-  assert.equal(CURATED_PROMPTS.length, 39);
-  assert.equal(new Set(CURATED_PROMPTS.map((p) => p.id)).size, 39);
-  assert.equal(new Set(CURATED_PROMPTS.map((p) => p.text)).size, 39);
+test("curated bank has 45 unique versioned UUID questions within limits", () => {
+  assert.equal(CURATED_PROMPTS.length, 45);
+  assert.equal(new Set(CURATED_PROMPTS.map((p) => p.id)).size, 45);
+  assert.equal(new Set(CURATED_PROMPTS.map((p) => p.text)).size, 45);
   for (const prompt of CURATED_PROMPTS) {
     assert.match(prompt.id, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
     assert.ok([...prompt.text].length > 0 && [...prompt.text].length <= 180);
     assert.equal(prompt.source, "curated");
-    assert.equal(prompt.version, "curated-v2");
+    assert.equal(prompt.version, "curated-v3");
   }
 });
 
@@ -108,10 +108,11 @@ test("invalid lengths are discarded individually without losing a valid sibling"
 });
 
 test("direction selection covers distinct pairs, including at most one unspecified", () => {
-  assert.equal(GENERATION_DIRECTIONS.length, 14);
-  for (let i = 0; i < 14; i++) {
-    for (let j = 0; j < 13; j++) {
-      const values = [(i + 0.5) / 14, (j + 0.5) / 13];
+  const count = GENERATION_DIRECTIONS.length;
+  assert.equal(count, 16);
+  for (let i = 0; i < count; i++) {
+    for (let j = 0; j < count - 1; j++) {
+      const values = [(i + 0.5) / count, (j + 0.5) / (count - 1)];
       const pair = selectGenerationDirections(() => values.shift()!);
       assert.notEqual(pair[0], pair[1]);
       assert.ok(pair.filter((d) => d.startsWith("Unspecified:")).length <= 1);

@@ -1,0 +1,83 @@
+/* Intro (A): "worlds apart, under one moon". A rare, once-per-session scene, so it may carry feeling, but it stays calm.
+   0-700 ms     two asteroids alone at the far edges, gently afloat; stars fade in
+   250-950 ms   one moon rises between them; 400-2260 ms it waxes, one phase every 400 ms
+   650-1850 ms  "Worlds apart, under one moon."; 700-1300 ms its light reaches both of them
+   1100-2100 ms they drift toward each other and the two beams follow them in
+   1950-2650 ms the moon is full as they meet (a full moon means reunion); 1900-2570 ms the title and slogan
+   3000 ms      the scene leaves, more quietly than it arrived */
+.fyp-intro {
+  --in-meet: cubic-bezier(0.42, 0, 0.2, 1);
+  --in-sway: cubic-bezier(0.45, 0, 0.55, 1);
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: radial-gradient(120% 90% at 50% 26%, var(--fyp-sky-bottom) 0%, var(--fyp-sky-top) 55%, var(--fyp-bg) 100%);
+  color: var(--fyp-ink);
+  cursor: default;
+  -webkit-tap-highlight-color: transparent;
+}
+.in-inner { width: min(440px, 100%); display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
+.in-stage { display: block; width: 100%; aspect-ratio: 400 / 260; overflow: visible; }
+.in-words { display: grid; width: 100%; }
+.in-words > * { grid-area: 1 / 1; }
+.in-caption { margin: 0; align-self: center; font: 500 24px/30px var(--fyp-font-hand); color: var(--fyp-muted); }
+.in-titles { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.in-title { margin: 0; font-family: var(--fyp-font-display); font-size: 34px; line-height: 38px; font-weight: 600; letter-spacing: -0.02em; }
+.in-slogan { margin: 0; max-width: 30ch; font-size: 15px; line-height: 22px; color: var(--fyp-muted); }
+
+.in-stars { animation: fyp-in-fade 600ms var(--fyp-ease-out) both; }
+.in-twinkle { animation: fyp-in-twinkle 2.4s var(--in-sway) infinite alternate; }
+.in-ast--a { animation: fyp-in-fade 700ms var(--fyp-ease-out) both; }
+.in-ast--b { animation: fyp-in-fade 700ms var(--fyp-ease-out) 120ms both; }
+.in-float--a { animation: fyp-in-float 2.6s var(--in-sway) infinite alternate; }
+.in-float--b { animation: fyp-in-float 3.2s var(--in-sway) -1.2s infinite alternate; }
+.in-drift--a { animation: fyp-in-drift-a 1000ms var(--in-meet) 1100ms both; }
+.in-drift--b { animation: fyp-in-drift-b 1000ms var(--in-meet) 1100ms both; }
+.in-moon { animation: fyp-in-moonrise 700ms var(--fyp-ease-out) 250ms both; }
+.in-phase { animation: fyp-in-fade 260ms var(--fyp-ease-out) both; }
+/* Opacity comes from two animations: the light arriving, then softening once the full moon's glow takes over.
+   The second has no backwards fill, so it cannot hide the first before it starts. */
+.in-beam { animation: fyp-in-fade 600ms var(--fyp-ease-out) 700ms both, fyp-in-beam-soften 500ms var(--fyp-ease-out) 2100ms forwards; }
+/* Rotate and stretch around the moon's centre (the parent group's origin) so each beam keeps pointing at its asteroid. */
+.in-ray { transform-box: view-box; transform-origin: 0 0; }
+.in-ray--a { animation: fyp-in-ray-a 1000ms var(--in-meet) 1100ms both; }
+.in-ray--b { animation: fyp-in-ray-b 1000ms var(--in-meet) 1100ms both; }
+.in-glow { transform-box: fill-box; transform-origin: center; animation: fyp-in-bloom 700ms var(--fyp-ease-out) 1950ms both; }
+.in-caption { animation: fyp-in-caption 1200ms var(--fyp-ease-out) 650ms both; }
+.in-title { animation: fyp-in-rise 520ms var(--fyp-ease-out) 1900ms both; }
+.in-slogan { animation: fyp-in-rise 520ms var(--fyp-ease-out) 2050ms both; }
+
+.fyp-intro--leaving { animation: fyp-in-leave 420ms cubic-bezier(0.4, 0, 1, 1) both; }
+.fyp-intro--leaving .in-inner { animation: fyp-in-lift 420ms cubic-bezier(0.4, 0, 1, 1) both; }
+
+@keyframes fyp-in-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fyp-in-twinkle { from { opacity: 0.2; } to { opacity: 0.85; } }
+@keyframes fyp-in-float { from { transform: translateY(-1.8px); } to { transform: translateY(1.8px); } }
+@keyframes fyp-in-drift-a { from { transform: translateX(-118px); } to { transform: none; } }
+@keyframes fyp-in-drift-b { from { transform: translateX(118px); } to { transform: none; } }
+@keyframes fyp-in-moonrise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+@keyframes fyp-in-ray-a { from { transform: rotate(49.6deg) scaleY(1.17); } to { transform: rotate(17.2deg) scaleY(0.79); } }
+@keyframes fyp-in-ray-b { from { transform: rotate(-48deg) scaleY(1.2); } to { transform: rotate(-16.3deg) scaleY(0.83); } }
+@keyframes fyp-in-beam-soften { from { opacity: 1; } to { opacity: 0.5; } }
+@keyframes fyp-in-bloom { from { opacity: 0; transform: scale(0.85); } to { opacity: 1; transform: none; } }
+@keyframes fyp-in-caption {
+  0% { opacity: 0; transform: translateY(6px); filter: blur(3px); }
+  25%, 75% { opacity: 1; transform: none; filter: none; }
+  100% { opacity: 0; transform: translateY(-4px); filter: blur(2px); }
+}
+@keyframes fyp-in-rise { from { opacity: 0; transform: translateY(8px); filter: blur(4px); } to { opacity: 1; transform: none; filter: none; } }
+@keyframes fyp-in-leave { from { opacity: 1; } to { opacity: 0; } }
+@keyframes fyp-in-lift { from { transform: none; } to { transform: translateY(-8px); } }
+
+@media (max-width: 359px) {
+  .in-title { font-size: 30px; line-height: 34px; }
+  .in-caption { font-size: 22px; }
+}
+/* The intro is not mounted for reduced motion; if it ever is, show the final scene without movement. */
+@media (prefers-reduced-motion: reduce) {
+  .fyp-intro *, .fyp-intro { animation: none !important; }
+  .in-caption { opacity: 0; }
+}

@@ -1,0 +1,17 @@
+/* MoonLoader (A). Eight phases shown one at a time; each frame owns 1/8 of the 1.6 s cycle.
+   Negative delays start every frame mid-cycle, so no frame shows before its turn. */
+.fyp-moon-loader { flex: none; display: inline-block; vertical-align: middle; }
+.fyp-moon-loader .ml-frame {
+  opacity: 0;
+  animation: fyp-ml-frame 1.6s steps(1, end) infinite;
+  animation-delay: calc(var(--ml-i) * 200ms - 1600ms);
+}
+@keyframes fyp-ml-frame {
+  0% { opacity: 1; }
+  12.5%, 100% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fyp-moon-loader .ml-frame { animation: none; }
+  .fyp-moon-loader .ml-frame--still { opacity: 1; }
+}

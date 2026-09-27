@@ -2,13 +2,25 @@
 .fyp-pp {
   position: relative;
   margin: 0;
-  background: linear-gradient(180deg, var(--fyp-sky-top), var(--fyp-sky-bottom));
+  isolation: isolate;
+}
+/* The sky dissolves into the page instead of ending in an edge: its gradient finishes on the page colour,
+   the drawing fades out before the bottom, and on wide layouts both sides feather out too. */
+.fyp-pp::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(180deg, var(--fyp-sky-top) 0%, var(--fyp-sky-bottom) 55%, var(--fyp-bg) 100%);
 }
 .fyp-pp svg {
   display: block;
   width: 100%;
   aspect-ratio: 400 / 190;
   overflow: hidden;
+  /* 82%: the lowest asteroid edge sits near y 156 of 190, so only the dust and the empty sky fade. */
+  -webkit-mask-image: linear-gradient(to bottom, #000 82%, transparent);
+  mask-image: linear-gradient(to bottom, #000 82%, transparent);
 }
 .fyp-pp .pp-x { transform: translate(calc(var(--x1) * 1px), 0); }
 .fyp-pp .pp-y { transform: translate(0, calc(var(--y1) * 1px)); }
@@ -42,6 +54,10 @@
 .pp-pulse { stroke-dasharray: 6 94; stroke-dashoffset: 6; animation: fyp-pp-pulse 2.9s ease-in-out infinite; }
 .fyp-pp--paused .pp-signal { opacity: 0.35; }
 
+/* Small arrivals: a sealed answer's envelope settles onto its asteroid; a player who just joined fades in. */
+.fyp-pp .pp-env { animation: fyp-pp-env-drop 280ms var(--fyp-ease-out) both; }
+.fyp-pp .pp-arrive { transform-box: fill-box; transform-origin: center; animation: fyp-pp-arrive 520ms cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
 /* Landing, delayed until after the answers and summary (see RevealScreen). */
 .fyp-pp--play .pp-x { animation: fyp-pp-x var(--fyp-d-land) var(--fyp-ease-x) var(--fyp-land-delay) both; }
 .fyp-pp--play .pp-y { animation: fyp-pp-y var(--fyp-d-land) var(--fyp-ease-y) var(--fyp-land-delay) both; }
@@ -60,6 +76,10 @@
   stroke-dasharray: 1;
   animation: fyp-pp-draw 450ms var(--fyp-ease-out) calc(var(--fyp-land-delay) + 300ms) both;
 }
+/* The moon waxes one step as the asteroids land; with all three rounds done it is full and softly glowing. */
+.fyp-pp--play .pp-moon-from { animation: fyp-pp-fade-out 600ms ease calc(var(--fyp-land-delay) + 400ms) both; }
+.fyp-pp--play .pp-moon-to { animation: fyp-pp-fade 600ms ease calc(var(--fyp-land-delay) + 400ms) both; }
+.fyp-pp--play .pp-moon-glow { animation: fyp-pp-fade 900ms ease calc(var(--fyp-land-delay) + 700ms) both; }
 .fyp-pp .pp-flag { transform-box: fill-box; transform-origin: 50% 100%; animation: fyp-pp-flag 380ms cubic-bezier(0.34, 1.56, 0.64, 1) both; }
 
 @keyframes fyp-pp-x { from { transform: translate(calc(var(--x0) * 1px), 0); } to { transform: translate(calc(var(--x1) * 1px), 0); } }
@@ -68,7 +88,9 @@
 @keyframes fyp-pp-orbit { from { transform: rotate(-18deg); } to { transform: rotate(22deg); } }
 @keyframes fyp-pp-twinkle { 0%, 100% { opacity: 0.2; } 50% { opacity: 0.85; } }
 @keyframes fyp-pp-pulse { 0% { stroke-dashoffset: 6; opacity: 0; } 10% { opacity: 1; } 85% { opacity: 1; } 100% { stroke-dashoffset: -100; opacity: 0; } }
-@keyframes fyp-pp-env-open { from { opacity: 1; transform: translate(0, -44px) scale(1); } to { opacity: 0; transform: translate(0, -50px) scale(0.8); } }
+@keyframes fyp-pp-env-open { from { opacity: 1; transform: none; } to { opacity: 0; transform: translate(0, -6px) scale(0.8); } }
+@keyframes fyp-pp-env-drop { from { opacity: 0; transform: translate(0, -6px); } to { opacity: 1; transform: none; } }
+@keyframes fyp-pp-arrive { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: none; } }
 @keyframes fyp-pp-fade-out { from { opacity: 1; } to { opacity: 0; } }
 @keyframes fyp-pp-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes fyp-pp-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
@@ -78,6 +100,16 @@
 
 @container (max-width: 359px) {
   .pp-legend { padding: 0 12px; font-size: 16px; }
+}
+@container (min-width: 720px) {
+  /* Wider than the stage: feather the sides so no vertical edge shows. The nicknames stay unmasked. */
+  .fyp-pp::before,
+  .fyp-pp svg {
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 6%, #000 94%, transparent), linear-gradient(to bottom, #000 82%, transparent);
+    -webkit-mask-composite: source-in;
+    mask-image: linear-gradient(to right, transparent, #000 6%, #000 94%, transparent), linear-gradient(to bottom, #000 82%, transparent);
+    mask-composite: intersect;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

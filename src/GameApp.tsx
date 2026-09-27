@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { IdentityData, IdentityProfile } from "@contracts/identity.ts";
 
 import "./styles/screens.css";
+import { Intro, shouldPlayIntro } from "./components/Intro.tsx";
 import { errorCodeOf } from "./components/error-copy.ts";
 import { useGameSession } from "./hooks/useGameSession.ts";
 import { GameScreen, GameStatus } from "./screens/GameScreen.tsx";
@@ -69,8 +70,19 @@ function GameRoute({ roomId, onLeave }: { roomId: string; onLeave: () => void })
   );
 }
 
-/** The real player flow: identity → create or join → the game. Records (task 5) are not wired yet. */
+/** The real player flow: identity → create or join → the game, with the opening scene on top once per session. */
 export function GameApp() {
+  const [intro, setIntro] = useState(() => shouldPlayIntro());
+  return (
+    <>
+      <PlayerFlow />
+      {intro ? <Intro onDone={() => setIntro(false)} /> : null}
+    </>
+  );
+}
+
+/** Records (task 5) are not wired yet. */
+function PlayerFlow() {
   const [identity, setIdentity] = useState<Identity>({ status: "loading" });
   const [roomId, setRoomId] = useState<string | null>(() => readRoom());
 
@@ -134,7 +146,8 @@ export function NotConfigured() {
         <h1 className="sc-title" id="fyp-not-configured">Find Your Planet</h1>
         <p className="sc-small">
           This build isn't connected to the game server. Add VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY to .env.local, or open a
-          demo: <a href="/?preview=game">game</a>, <a href="/?preview=screens">screens</a>, <a href="/?preview=reveal">reveal</a>.
+          demo: <a href="/?preview=game">game</a>, <a href="/?preview=screens">screens</a>, <a href="/?preview=reveal">reveal</a>,{" "}
+          <a href="/?preview=intro">intro</a>.
         </p>
       </div>
     </section>

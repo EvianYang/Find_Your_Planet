@@ -1,5 +1,7 @@
 import { useCallback, useState, type ReactNode } from "react";
 
+import { MoonLoader } from "./MoonLoader.tsx";
+
 export function WarnIcon() {
   return (
     <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
@@ -65,7 +67,7 @@ export function Button({ children, onClick, kind = "primary", busyLabel, disable
         onClick?.();
       }}
     >
-      {busy ? <span className="sc-spin" aria-hidden="true" /> : null}
+      {busy ? <MoonLoader size={16} /> : null}
       {busy ? busyLabel : children}
     </button>
   );

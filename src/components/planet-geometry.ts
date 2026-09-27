@@ -42,6 +42,34 @@ export function unknownKind(result: Pick<RoundResult, "distance" | "status">): U
 
 const round1 = (value: number) => Math.round(value * 10) / 10;
 
+/** The moon in the top-right corner of the sky; it waxes as rounds are completed. */
+export const MOON = { cx: 356, cy: 30.5, r: 9.5 } as const;
+const MOON_LIT_BY_COMPLETED_ROUNDS = [0.12, 0.4, 0.7, 1] as const;
+
+/** Thin crescent before the game, a little fuller after each round, full once all three are done. */
+export function moonLitForRounds(completed: number): number {
+  const index = Math.min(3, Math.max(0, Math.floor(completed)));
+  return MOON_LIT_BY_COMPLETED_ROUNDS[index];
+}
+
+/**
+ * Lit part of a moon of radius r at (cx, cy), from 0 (new) to 1 (full). Waxing lights the right side, waning the left.
+ * The outer edge is half of the disk; the terminator is a half-ellipse with rx = r·|1 − 2·lit|, bulging toward the lit
+ * limb for a crescent and away from it for a gibbous moon.
+ */
+export function moonShape(lit: number, cx: number, cy: number, r: number, waning = false): string {
+  const k = Math.min(1, Math.max(0, lit));
+  const rx = round1(r * Math.abs(1 - 2 * k));
+  const outer = waning ? 0 : 1;
+  const terminator = (k < 0.5) === waning ? 1 : 0;
+  return `M${cx} ${cy - r}A${r} ${r} 0 0 ${outer} ${cx} ${cy + r}A${rx} ${r} 0 0 ${terminator} ${cx} ${cy - r}Z`;
+}
+
+/** The sky's moon (waxing) at its fixed place in the stage. */
+export function moonPath(lit: number): string {
+  return moonShape(lit, MOON.cx, MOON.cy, MOON.r);
+}
+
 /** Closed hand-drawn blob through jittered points on an ellipse (Catmull-Rom to cubic Bézier). */
 export function blobPath(
   radius: number,

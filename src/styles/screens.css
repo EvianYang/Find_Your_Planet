@@ -11,7 +11,9 @@
 }
 .fyp-screen :focus-visible { outline: 2px solid var(--fyp-ink); outline-offset: 3px; border-radius: 10px; }
 .fyp-screen .fyp-sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-.sc-sheet { padding: 22px 20px 32px; display: flex; flex-direction: column; gap: 20px; flex: 1; }
+.sc-sheet { padding: 22px 20px 32px; display: flex; flex-direction: column; gap: 20px; flex: 1; animation: fyp-sc-enter 220ms var(--fyp-ease-out) both; }
+/* A new phase arrives softly instead of cutting in; opacity and a small rise only, so focus still works at once. */
+@keyframes fyp-sc-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 .sc-brand { display: flex; flex-direction: column; gap: 6px; }
 .sc-brand h1 { margin: 0; font-family: var(--fyp-font-display); font-size: 34px; line-height: 38px; font-weight: 600; letter-spacing: -0.02em; }
 .sc-brand h1:focus { outline: none; }
@@ -78,7 +80,6 @@
 .sc-btn--danger { background: transparent; color: var(--fyp-warn); border: 1px solid rgba(243, 201, 139, 0.6); }
 .sc-btn[aria-busy="true"] { cursor: progress; opacity: 0.82; }
 .sc-btn[aria-disabled="true"]:not([aria-busy]) { background: rgba(247, 244, 238, 0.08); color: var(--fyp-faint); border: 1px dashed var(--fyp-line-strong); cursor: not-allowed; }
-.sc-spin { width: 16px; height: 16px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: fyp-sc-spin 0.9s linear infinite; }
 .sc-link {
   appearance: none;
   align-self: flex-start;
@@ -168,7 +169,6 @@
 .sc-empty { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px; padding: 26px 6px; }
 .sc-empty svg { width: 150px; height: auto; }
 
-@keyframes fyp-sc-spin { to { transform: rotate(360deg); } }
 
 @container (max-width: 359px) {
   .sc-sheet { padding: 18px 16px 28px; gap: 18px; }
@@ -185,5 +185,5 @@
   .sc-brand h1 { font-size: 44px; line-height: 48px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .sc-spin { animation: none; border-right-color: currentColor; opacity: 0.6; }
+  .sc-sheet { animation: none; }
 }

@@ -124,3 +124,68 @@ A 可审核解释呈现和 null 状态；B 仍需完成真实房间调用、租�
 验证：39项本地测试全部通过；应用 `tsc -b` 与全部测试严格类型检查通过。本次不调用真实模型。测试中的模型结果是明确的受控评分，不是对样例含义的真实模型验收。
 
 限制：算法不使用字数，无法据此证明模型本身不存在长短偏好；该语义部分仍由3.9校准。3.8三轮汇总未在本次实现；A须正确展示null，B仍需实际房间结果发布与持久化联调。
+
+## comparison-v4：解读质量（2026-09-26，待真实模型验收）
+
+真实试玩发现三类问题：summary 复述题干（如 “Both are short global sky-messages”）、unknowns 总是 “No explanation why…” 这类套话、英文解读里夹中文；另有一条 summary 恰好在 120 字符处被截断（请求 JSON Schema 的 maxLength 让生成在上限处停住）。
+
+- `prompt.ts` 升为 comparison-v4：
+  - 任何字段都不把题干前提当作洞察；commonality 只写超出题干的共同点，只有题干重合时留空；
+  - summary 要说出每份答案对题目的切入角度，以及两者在哪里汇合或分叉；只描述答案，不描述人；附一个与游戏题目无关的强弱对照例；
+  - 避免 “Both are X: one …, the other …” 在 X 只是题干时的套路；
+  - 字数改为“参考 + 宽硬上限”：summary / explanation 参考 10–16 词、约 100 字符，commonality / divergence / unknowns 每条参考约 90 字符；硬上限放宽为 200 / 160（evidence 仍是 60），统一定义在 `contracts/evaluation.ts` 的 `INTERPRETATION_MAX`、`LIST_ITEM_MAX`、`EVIDENCE_MAX`，提示词、请求 JSON Schema、`records.ts` 与测试都引用这些常量。原来把 120 同时当目标和生成上限，模型会在第 120 个字符处被截断；
+  - unknowns 只写会改变比较结论的具体疑问，不写适用于任何短答案的缺口；可以为空；
+  - 答案是其他语言时，解读字段仍用英文转述，非英文只允许出现在 evidence 里。
+- `openai-provider.ts` 推理强度从 low 调为 medium，`max_output_tokens` 从 2500 调为 5000（推理 token 也计入）；模型改为 gpt-5.4-mini 通过环境变量 `LLM_MODEL` 配置，代码不写死模型。
+- 语言检查：`ModelComparisonSchema` 拒绝 summary、explanation、commonality、divergence、unknowns 中的非拉丁字母（如中文），按 INVALID_OUTPUT 处理并走现有自动重试；evidence 不检查，可逐字引用中文答案。检查只在模型输出这一步，不加在 `RoundResultSchema`，已保存的旧结果仍可解析。
+- `tests/ai/explanation-cases.ts` 新增三个虚构样例：题干不是洞察、非英文答案、信息多的答案仍要完整放进上限。
+- 未改 fmp-v1、字段结构、权重或距离算法；本地校验改了长度上限，并新增模型输出的语言检查。
+
+待验证：用 `scripts/check-explanations.ts` 以 gpt-5.4-mini 跑全部样例，人工检查 summary 与 unknowns，记录耗时（单次调用上限 20 秒）以及是否出现 `incomplete`（medium 的推理 token 也计入 `max_output_tokens: 5000`）或因语言检查触发的 INVALID_OUTPUT。本机没有 `supabase/functions/.env.local`，本次未调用真实模型。
+
+## comparison-v5：对玩家说话的语气与轻量倾向解读（2026-09-26，待真实模型验收）
+
+试玩反馈：共同点和差异语气疏远、缺少分析；中间的 summary 太长，像复述答案（“One goes home; the other goes to school. Both choose familiar everyday places, but the targets differ.”）。经用户确认采用“温和倾向版”，同步修改了 CONTRACTS 第 7 节提示词基线与 PROJECT.md 的解读说明。
+
+- 面向玩家的文字（summary、commonality、divergence、unknowns）对两人共同说话：共同点以 “You both” 开头，差异用 “One of you …, while the other …”；两人看到同一段文字，所以不对单独一人用 “you”，也不用昵称或 A/B。
+- 文本支持时，可以用 seems / leans toward / might 这类留有余地的措辞，点出答案流露的思考方式、价值或情感倾向，例如 comfort and belonging versus purpose and routine。只谈本轮答案，轻松而不临床。
+- 仍然禁止：固定标签或类型（introvert、selfish 等）；年龄、性别、文化、职业的刻板印象；对关系或契合度下结论；给答案排高低。很短的答案最多用一个留有余地的短语点一下，不编故事，不支持的维度仍为 null。
+- summary 改为一句由共同点和差异提炼的短标题：约 5–10 词、60 字符内，不写第二句，不复述答案。
+- 维度 explanation 不在揭晓页显示，缩短到 80 字符内，把输出预算留给推理。推理强度保持 medium，硬上限不变（200 / 160 / 60）。
+- 对照例子改为展示三种字段的新语气；新增虚构样例 `bare-choices-light-reading`（只给地点的短答案）。
+- 已保存的旧结果仍是旧语气，界面照常显示；前端演示 fixture 未改。
+
+## comparison-v6：主观解读思维方式与价值倾向（2026-09-26，待真实模型验收）
+
+试玩反馈：即使答案很长，共同点和差异仍在复述题干和答案内容，不够主观。经用户确认放开 v5 的“不做人格判定”，改为主观解读，并同步修改 CONTRACTS 第 7 节、PROJECT.md 与 START_AI.md 的基线措辞。
+
+- 提示词分成三部分：PART 1 打分（与之前相同，严格依据文本，距离算法不变）、PART 2 解读、FORMAT。
+- PART 2 明确“复述即失败”，换成更抽象的词复述也算复述。写之前先私下为每份答案找五个信号：论证方式、责任与主动权归于谁、保护与容忍什么、视野尺度、语气气质；再比较两人的思维方式与价值倾向，找不明显的交汇点。
+- 每句话要过三条检验：只看题目写不出来；换成同话题的另外两个答案就不成立；说的是思路、假设、取舍或价值，而不只是话题。
+- 可以借用荣格八维 / MBTI 的维度语言，转成日常说法；不输出类型代号或框架名，不宣称给人定型。仍禁止诊断、刻板印象、评判关系或契合度、给答案排高低。
+- 示例换成一组虚构的正反对照（删除一项发明：社交媒体 vs 塑料袋）。
+- 长度：summary 60 字符内的一句标题；commonality / divergence / unknowns 参考 160 字符内；`LIST_ITEM_MAX` 硬上限从 160 放宽到 240。部署时仍须先部署 `game` 与网页，再部署 `evaluate`。
+- 推理强度仍为 medium。若 gpt-5.4-mini 仍停留在复述，下一步考虑 high 或更强的模型。
+
+## comparison-v7 与计分规则 fmp-v2（2026-09-27，待真实模型验收）
+
+试玩时经常出现同样的距离。原因：fmp-v1 只有三维、每维 5 档，满覆盖时只能算出 17 种距离（62.5 的倍数），模型又爱给中间分 2。fmp-v2 改为：
+
+- 模型给两项重合度（imagery、focus，0–4），再对每份答案**分别**画像：leap（0–4）、思维方式四条轴（scope / basis / direction / closure，−2…+2，借用荣格八维 / MBTI 的维度但用日常说法）、价值倾向四组（openness / enhancement / conservation / transcendence，0–3，参照 Schwartz 基本价值理论）。
+- 服务端用 `calculateFmpV2` 把各项差距换成 0–1 并加权：联想 0.30、思维方式 0.35、价值倾向 0.35；null 不计入；coverage < 0.5 无距离。分别画像再比较差距，天然对称，也避开了“直接判断像不像”时往中间靠的倾向。
+- 同样的随机分数下，fmp-v2 在 2 万组组合里算出 488 种不同距离，最常见的值只占 0.7%。
+- 提示词：每个子项写明刻度与例子（“删掉一项发明：社交媒体 vs 塑料袋”，示例距离 224，测试中逐项核对）；要求各自画像时不看另一份答案；null 表示看不出、不是中间分；解读要围绕画像里最接近和最远的地方写，使文字和数字一致。
+- 去掉每维 explanation（玩家看不到），证据改为每份答案 1–2 条原文，输出预算留给推理。
+- `RoundResultSchema` 同时接受 fmp-v1 与 fmp-v2；已保存的 fmp-v1 结果不重算。记录结构允许 `fmp-v2`。演示 fixture 仍是 fmp-v1。
+- 部署：先 `game` 与网页（能读取 fmp-v2），最后 `evaluate`。
+
+## comparison-v8：引用对齐原文（2026-09-27）
+
+真实评估出现 `INVALID_EVIDENCE`：模型约 15.8 秒正常返回，但至少一条引用不是逐字原文。常见原因是抄写时改了空格、全半角、大小写、标点或引号（中英混写的答案尤其容易），整轮因此失败并消耗重试。
+
+- 新增 `_shared/ai/evidence.ts`：`alignQuote` 忽略空白、标点、大小写、全半角与重音，在对应答案里定位同一串文字，返回答案里的原样片段；找不到或对齐后超过 60 字符时返回 null。`alignEvidence` 保留能对齐的引用、去重、丢弃其余。
+- `evaluate-pair.ts` 在结构校验之后、原文校验之前对齐两侧引用；保存的仍是原文片段，`createModelComparisonSchema` 的逐字校验不变。丢弃后 status=ok 且某侧为空时仍为 INVALID_EVIDENCE。
+- `EvaluationError` 新增 `issues`（字段路径、Zod 错误类型、“leftEvidence: 0/2 matched”这类计数），`evaluate/index.ts` 在每次尝试失败和最终失败时写入日志；不记录答案、引用或模型原始输出。
+- 提示词升为 comparison-v8，只加一句：保留全角标点、不要在中英文之间加空格、不要给引用加引号。
+- 测试：`tests/ai/evidence.test.ts`（中英混写、全半角、引号、大小写、重音、长度上限、编造与跨答案引用）；`output-validation.test.ts` 改为“能对齐的修正、对不上的丢弃、全丢光才失败”。
+- 单次模型调用上限 `EVALUATION_TIMEOUT_MS` 从 20 秒调为 40 秒：medium 推理下一次调用已接近 16 秒。认领和自动重试都会把租约重新计为 60 秒，所以不需要改数据库；一轮最多约 80 秒（两次尝试）后才显示失败。

@@ -69,6 +69,7 @@ export function ResultScreen({ players, viewerSlot, overall, rounds, alreadySave
         mode="result"
         result={{ distance, status: distance === null ? "insufficient" : "ok" }}
         nicknames={names}
+        moon={{ lit: 1 }}
         ariaLabel={
           distance === null
             ? "Two asteroids resting, with no overall distance for this game."

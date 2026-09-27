@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ModelComparisonSchema } from "../../supabase/functions/_shared/contracts/evaluation.ts";
+import { EVIDENCE_MAX, INTERPRETATION_MAX, LIST_ITEM_MAX, ModelComparisonSchema } from "../../supabase/functions/_shared/contracts/evaluation.ts";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createOpenAIProvider } from "../../supabase/functions/_shared/ai/openai-provider.ts";
@@ -13,18 +13,18 @@ test("adapter sends strict structure, cancellation and no storage in one request
     const body = JSON.parse(String(init?.body));
     assert.equal(body.store, false);
     assert.equal(body.text.format.strict, true);
-    assert.equal(body.reasoning.effort, "low");
+    assert.equal(body.reasoning.effort, "medium");
+    assert.equal(body.max_output_tokens, 5000);
     const schema = body.text.format.schema;
-    assert.equal(schema.properties.summary.maxLength, 120);
+    assert.equal(schema.properties.summary.maxLength, INTERPRETATION_MAX);
     for (const key of ["commonality", "divergence", "unknowns"]) {
-      assert.equal(schema.properties[key].items.maxLength, 100);
+      assert.equal(schema.properties[key].items.maxLength, LIST_ITEM_MAX);
     }
-    for (const dimension of ["imagery", "association", "orientation"]) {
-      const fields = schema.properties.dimensions.properties[dimension].properties;
-      assert.equal(fields.explanation.maxLength, 120);
-      assert.equal(fields.leftEvidence.items.maxLength, 60);
-      assert.equal(fields.rightEvidence.items.maxLength, 60);
+    for (const key of ["leftEvidence", "rightEvidence"]) {
+      assert.equal(schema.properties[key].items.maxLength, EVIDENCE_MAX);
     }
+    assert.deepEqual(Object.keys(schema.properties.leftProfile.properties).sort(), ["leap", "thinking", "values"]);
+    assert.equal(schema.additionalProperties, false);
     assert.deepEqual(request.jsonSchema, z.toJSONSchema(ModelComparisonSchema));
     return Response.json({ status: "completed", output: [{ type: "message", content: [{ type: "output_text", text: '{"ok":true}' }] }] });
   });

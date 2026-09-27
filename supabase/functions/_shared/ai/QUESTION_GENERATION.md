@@ -2,7 +2,7 @@
 
 Runtime rules now match `generate-prompts.md`, version `question-generation-v2`.
 
-- `generation-prompt.ts` contains the reviewed English system instructions, user-message template and 13 directions plus Unspecified. Code samples two distinct directions before each request.
+- `generation-prompt.ts` contains the reviewed English system instructions, user-message template and 15 directions plus Unspecified. Code samples two distinct directions before each request.
 - `generate-prompts.ts` exports `generatePromptCandidates(generate)`. The provider receives `{instructions, user, signal}`. Send instructions as the system message and user as the user message; disable SDK retries, honor the signal and return decoded JSON. The previous `curatedQuestions` argument has been removed.
 - The curated bank is used only in local post-generation deduplication. No bank text, product name, example questions, answers or personal history enters the model request.
 - One attempt returns 0–2 candidates within eight seconds. Invalid envelopes fail the attempt; blank or overlong individual texts are discarded. Normalized duplicates within the batch are removed. Accepted candidates use the shared PromptSchema with version `question-generation-v2`.
