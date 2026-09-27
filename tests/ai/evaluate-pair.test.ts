@@ -70,7 +70,7 @@ test("insufficient stays null; provider errors are sanitized and not retried", a
   assert.equal(calls, 1);
 });
 
-test("20-second timeout aborts and ignores provider late completion", async (t) => {
+test("40-second timeout aborts and ignores provider late completion", async (t) => {
   t.mock.timers.enable({ apis: ["setTimeout"] });
   let signal: AbortSignal | undefined;
   let finish: ((result: unknown) => void) | undefined;
@@ -80,7 +80,10 @@ test("20-second timeout aborts and ignores provider late completion", async (t) 
   } });
   const rejected = assert.rejects(pending, code("TIMEOUT"));
   await Promise.resolve();
-  t.mock.timers.tick(20_000);
+  t.mock.timers.tick(39_999);
+  await Promise.resolve();
+  assert.equal(signal?.aborted, false);
+  t.mock.timers.tick(1);
   await rejected;
   assert.equal(signal?.aborted, true);
   finish?.(output("Apple", "Zebra"));
@@ -89,7 +92,7 @@ test("20-second timeout aborts and ignores provider late completion", async (t) 
 
 test("comparison instructions require English prose while preserving verbatim evidence", async () => {
   const { COMPARISON_PROMPT_VERSION, COMPARISON_SYSTEM_PROMPT } = await import("../../supabase/functions/_shared/ai/prompt.ts");
-  assert.equal(COMPARISON_PROMPT_VERSION, "comparison-v7");
+  assert.equal(COMPARISON_PROMPT_VERSION, "comparison-v8");
   assert.match(COMPARISON_SYSTEM_PROMPT, /summary, commonality, divergence, and unknowns in English/);
   // fmp-v2 scoring: two pair overlaps, then each answer profiled on its own; the server computes the distance.
   assert.match(COMPARISON_SYSTEM_PROMPT, /Profile each answer as if the other did not exist/);

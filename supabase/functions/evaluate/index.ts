@@ -210,6 +210,14 @@ Deno.serve(async (request) => {
         }, provider);
       } catch (error) {
         lastError = error;
+        // Per-attempt log: error code and validation paths only, never answers, evidence or provider payloads.
+        console.warn(JSON.stringify({
+          requestId,
+          category: "EVALUATION_ATTEMPT_FAILED",
+          code: error instanceof EvaluationError ? error.code : "INTERNAL_ERROR",
+          issues: error instanceof EvaluationError ? error.issues : [],
+          durationMs: Date.now() - startedAt,
+        }));
         const canAutomaticallyRetry =
           error instanceof EvaluationError &&
           error.code !== "INVALID_CONFIGURATION" &&
@@ -234,7 +242,8 @@ Deno.serve(async (request) => {
     if (!result) {
       await markFailed(adminClient, roomId, roundIndex, claimToken);
       const category = lastError instanceof EvaluationError ? lastError.code : "INTERNAL_ERROR";
-      console.error(JSON.stringify({ requestId, category, durationMs: Date.now() - startedAt }));
+      const issues = lastError instanceof EvaluationError ? lastError.issues : [];
+      console.error(JSON.stringify({ requestId, category, issues, durationMs: Date.now() - startedAt }));
       return failure(
         requestId,
         "EVALUATION_FAILED",
@@ -278,7 +287,8 @@ Deno.serve(async (request) => {
       }
     }
     const category = error instanceof EvaluationError ? error.code : "INTERNAL_ERROR";
-    console.error(JSON.stringify({ requestId, category, durationMs: Date.now() - startedAt }));
+    const issues = error instanceof EvaluationError ? error.issues : [];
+    console.error(JSON.stringify({ requestId, category, issues, durationMs: Date.now() - startedAt }));
     if (claimAcquired) {
       return failure(
         requestId,

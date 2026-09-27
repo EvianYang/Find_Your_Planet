@@ -100,24 +100,56 @@ test("text boundaries count Unicode code points and reject excess without trunca
   }
 });
 
-test("each side rejects invented, altered, noncontiguous or swapped quotes", async () => {
+test("each side rejects invented, noncontiguous or swapped quotes when nothing else is left", async () => {
   for (const side of sides) {
     const wrong = side === "leftEvidence" ? "Zebra soup" : "Apple  pie";
-    for (const quote of ["fabricated", wrong, "Apple pie", "apple  pie", "Apple…tradition", "Zebra soup"]) {
+    for (const quote of ["fabricated", wrong, "Apple…tradition", "keeps the tradition"]) {
       await rejected(patched((raw) => { raw[side] = [quote]; }), "INVALID_EVIDENCE");
     }
-    await rejected(patched((raw) => { raw[side].push("fabricated second quote"); }), "INVALID_EVIDENCE");
   }
 });
 
-test("insufficient means nothing could be scored, and still validates supplied evidence", async () => {
+test("loosely copied quotes are aligned to the answer's own text", async () => {
+  const raw = patched((r) => {
+    r.leftEvidence = ["apple pie", "“Keeps a family”"];
+    r.rightEvidence = ["Zebra\u00a0soup"];
+  });
+  const result = await evaluatePair(input, { modelId: "validation-test", async compare() { return raw; } });
+  if (result.rubricVersion !== "fmp-v2") assert.fail("expected fmp-v2");
+  assert.deepEqual(result.aEvidence, ["Apple  pie", "keeps a family"]);
+  assert.deepEqual(result.bEvidence, ["Zebra soup"]);
+});
+
+test("an unmatched quote is dropped when the same answer has a matching one", async () => {
+  const raw = patched((r) => { r.rightEvidence.push("fabricated second quote"); });
+  const result = await evaluatePair(input, { modelId: "validation-test", async compare() { return raw; } });
+  if (result.rubricVersion !== "fmp-v2") assert.fail("expected fmp-v2");
+  assert.deepEqual(result.bEvidence, ["Zebra soup"]);
+});
+
+test("evidence failures report counts and paths, never answer or quote text", async () => {
+  const raw = patched((r) => { r.leftEvidence = ["fabricated"]; });
+  await assert.rejects(evaluatePair(input, { modelId: "validation-test", async compare() { return raw; } }), (error: unknown) => {
+    assert.ok(error instanceof EvaluationError);
+    assert.equal(error.code, "INVALID_EVIDENCE");
+    assert.ok(error.issues.includes("leftEvidence: 0/1 matched"));
+    const logged = JSON.stringify(error.issues);
+    for (const text of ["fabricated", "Apple", "Zebra", "tradition"]) assert.doesNotMatch(logged, new RegExp(text));
+    return true;
+  });
+});
+
+test("insufficient means nothing could be scored; unmatched evidence is dropped", async () => {
   const unknown = modelOutput({ imagery: null, focus: null }, blankProfile(), blankProfile(), { left: [], right: [] });
   await rejected({ ...unknown, status: "ok" });
   const result = await evaluatePair(input, { modelId: "validation-test", async compare() { return unknown; } });
   assert.equal(result.status, "insufficient");
   assert.equal(result.distance, null);
   await rejected({ ...valid(), status: "insufficient" });
-  await rejected({ ...unknown, leftEvidence: ["fabricated"] }, "INVALID_EVIDENCE");
+  const dropped = await evaluatePair(input, { modelId: "validation-test", async compare() { return { ...unknown, leftEvidence: ["fabricated"] }; } });
+  if (dropped.rubricVersion !== "fmp-v2") assert.fail("expected fmp-v2");
+  assert.equal(dropped.status, "insufficient");
+  assert.deepEqual(dropped.aEvidence, []);
 });
 
 test("partial scores give a low-coverage unknown, not a distance", async () => {

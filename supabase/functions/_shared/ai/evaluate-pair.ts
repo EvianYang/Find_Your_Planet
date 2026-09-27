@@ -3,18 +3,25 @@ import { ComparisonInputSchema } from "../contracts/evaluate.ts";
 import { ModelComparisonSchema, RoundResultV2Schema, createModelComparisonSchema } from "../contracts/evaluation.ts";
 import type { RoundResult } from "../contracts/evaluation.ts";
 import { calculateFmpV2 } from "./distance.ts";
+import { alignEvidence } from "./evidence.ts";
 import { COMPARISON_SYSTEM_PROMPT } from "./prompt.ts";
 
-export const EVALUATION_TIMEOUT_MS = 20_000;
+/** Per model call. Each attempt gets a fresh 60-second lease (claim or retry), so this must stay well under 60 s. */
+export const EVALUATION_TIMEOUT_MS = 40_000;
 export type EvaluationErrorCode = "INVALID_INPUT" | "INVALID_CONFIGURATION" | "TIMEOUT" | "PROVIDER_ERROR" | "INVALID_OUTPUT" | "INVALID_EVIDENCE";
 export class EvaluationError extends Error {
   readonly code: EvaluationErrorCode;
-  constructor(code: EvaluationErrorCode) {
+  /** Where validation failed, for logs: field paths, issue codes and counts only, never answer or evidence text. */
+  readonly issues: string[];
+  constructor(code: EvaluationErrorCode, issues: string[] = []) {
     super(code); // Never expose provider payloads, answers or credentials in errors.
     this.name = "EvaluationError";
     this.code = code;
+    this.issues = issues;
   }
 }
+
+const issuePaths = (error: z.ZodError) => error.issues.slice(0, 8).map((issue) => `${issue.path.join(".") || "(root)"}: ${issue.code}`);
 
 /** Adapter must send the schema to the provider, disable SDK retries, honor signal,
  * and return decoded JSON. Refusal/network failure must reject, not synthesize data.
@@ -78,9 +85,23 @@ export async function evaluatePair(input: unknown, provider: ComparisonProvider)
     clearTimeout(timer);
   }
   const structural = ModelComparisonSchema.safeParse(raw);
-  if (!structural.success) throw new EvaluationError("INVALID_OUTPUT");
-  const grounded = createModelComparisonSchema(left, right).safeParse(raw);
-  if (!grounded.success) throw new EvaluationError("INVALID_EVIDENCE");
+  if (!structural.success) throw new EvaluationError("INVALID_OUTPUT", issuePaths(structural.error));
+  // Models copy quotes loosely (spacing, width, case, punctuation). Align each quote to the answer's own
+  // text and drop quotes that are not there; a scored comparison still needs one quote per answer.
+  const leftAligned = alignEvidence(structural.data.leftEvidence, left);
+  const rightAligned = alignEvidence(structural.data.rightEvidence, right);
+  const grounded = createModelComparisonSchema(left, right).safeParse({
+    ...structural.data,
+    leftEvidence: leftAligned.kept,
+    rightEvidence: rightAligned.kept,
+  });
+  if (!grounded.success) {
+    throw new EvaluationError("INVALID_EVIDENCE", [
+      `leftEvidence: ${leftAligned.kept.length}/${leftAligned.total} matched`,
+      `rightEvidence: ${rightAligned.kept.length}/${rightAligned.total} matched`,
+      ...issuePaths(grounded.error),
+    ]);
+  }
   const comparison = grounded.data;
   // Map canonical left/right back to player slots A/B.
   const a = aIsLeft ? comparison.leftProfile : comparison.rightProfile;

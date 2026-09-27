@@ -178,3 +178,14 @@ A 可审核解释呈现和 null 状态；B 仍需完成真实房间调用、租�
 - 去掉每维 explanation（玩家看不到），证据改为每份答案 1–2 条原文，输出预算留给推理。
 - `RoundResultSchema` 同时接受 fmp-v1 与 fmp-v2；已保存的 fmp-v1 结果不重算。记录结构允许 `fmp-v2`。演示 fixture 仍是 fmp-v1。
 - 部署：先 `game` 与网页（能读取 fmp-v2），最后 `evaluate`。
+
+## comparison-v8：引用对齐原文（2026-09-27）
+
+真实评估出现 `INVALID_EVIDENCE`：模型约 15.8 秒正常返回，但至少一条引用不是逐字原文。常见原因是抄写时改了空格、全半角、大小写、标点或引号（中英混写的答案尤其容易），整轮因此失败并消耗重试。
+
+- 新增 `_shared/ai/evidence.ts`：`alignQuote` 忽略空白、标点、大小写、全半角与重音，在对应答案里定位同一串文字，返回答案里的原样片段；找不到或对齐后超过 60 字符时返回 null。`alignEvidence` 保留能对齐的引用、去重、丢弃其余。
+- `evaluate-pair.ts` 在结构校验之后、原文校验之前对齐两侧引用；保存的仍是原文片段，`createModelComparisonSchema` 的逐字校验不变。丢弃后 status=ok 且某侧为空时仍为 INVALID_EVIDENCE。
+- `EvaluationError` 新增 `issues`（字段路径、Zod 错误类型、“leftEvidence: 0/2 matched”这类计数），`evaluate/index.ts` 在每次尝试失败和最终失败时写入日志；不记录答案、引用或模型原始输出。
+- 提示词升为 comparison-v8，只加一句：保留全角标点、不要在中英文之间加空格、不要给引用加引号。
+- 测试：`tests/ai/evidence.test.ts`（中英混写、全半角、引号、大小写、重音、长度上限、编造与跨答案引用）；`output-validation.test.ts` 改为“能对齐的修正、对不上的丢弃、全丢光才失败”。
+- 单次模型调用上限 `EVALUATION_TIMEOUT_MS` 从 20 秒调为 40 秒：medium 推理下一次调用已接近 16 秒。认领和自动重试都会把租约重新计为 60 秒，所以不需要改数据库；一轮最多约 80 秒（两次尝试）后才显示失败。
