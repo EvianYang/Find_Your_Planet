@@ -142,3 +142,15 @@ A 可审核解释呈现和 null 状态；B 仍需完成真实房间调用、租�
 - 未改 fmp-v1、字段结构、权重或距离算法；本地校验改了长度上限，并新增模型输出的语言检查。
 
 待验证：用 `scripts/check-explanations.ts` 以 gpt-5.4-mini 跑全部样例，人工检查 summary 与 unknowns，记录耗时（单次调用上限 20 秒）以及是否出现 `incomplete`（medium 的推理 token 也计入 `max_output_tokens: 5000`）或因语言检查触发的 INVALID_OUTPUT。本机没有 `supabase/functions/.env.local`，本次未调用真实模型。
+
+## comparison-v5：对玩家说话的语气与轻量倾向解读（2026-09-26，待真实模型验收）
+
+试玩反馈：共同点和差异语气疏远、缺少分析；中间的 summary 太长，像复述答案（“One goes home; the other goes to school. Both choose familiar everyday places, but the targets differ.”）。经用户确认采用“温和倾向版”，同步修改了 CONTRACTS 第 7 节提示词基线与 PROJECT.md 的解读说明。
+
+- 面向玩家的文字（summary、commonality、divergence、unknowns）对两人共同说话：共同点以 “You both” 开头，差异用 “One of you …, while the other …”；两人看到同一段文字，所以不对单独一人用 “you”，也不用昵称或 A/B。
+- 文本支持时，可以用 seems / leans toward / might 这类留有余地的措辞，点出答案流露的思考方式、价值或情感倾向，例如 comfort and belonging versus purpose and routine。只谈本轮答案，轻松而不临床。
+- 仍然禁止：固定标签或类型（introvert、selfish 等）；年龄、性别、文化、职业的刻板印象；对关系或契合度下结论；给答案排高低。很短的答案最多用一个留有余地的短语点一下，不编故事，不支持的维度仍为 null。
+- summary 改为一句由共同点和差异提炼的短标题：约 5–10 词、60 字符内，不写第二句，不复述答案。
+- 维度 explanation 不在揭晓页显示，缩短到 80 字符内，把输出预算留给推理。推理强度保持 medium，硬上限不变（200 / 160 / 60）。
+- 对照例子改为展示三种字段的新语气；新增虚构样例 `bare-choices-light-reading`（只给地点的短答案）。
+- 已保存的旧结果仍是旧语气，界面照常显示；前端演示 fixture 未改。

@@ -36,7 +36,15 @@ export const EXPLANATION_CASES = [
       prompt: "For one minute, you can write a message across the sky that the whole world can read. What does it say?",
       answers: { a: "Good morning, everyone!", b: "Look up and breathe for a second." },
     },
-    review: "The summary must not say both are sky messages or slogans for everyone; contrast a greeting to the world with asking people to pause. Unknowns must not be a generic 'no reason given'.",
+    review: "Commonality starts with 'You both' and goes beyond 'you both wrote a sky message'; divergence uses 'One of you ..., while the other ...' and may hedge a lean (greeting the world versus asking people to pause). The summary is one short headline under 60 characters. Unknowns are not a generic 'no reason given'.",
+  },
+  {
+    id: "bare-choices-light-reading",
+    input: {
+      prompt: "You can teleport anywhere, but only to places you've seen in a photo. Where do you go first?",
+      answers: { a: "My grandmother's kitchen.", b: "The library." },
+    },
+    review: "Association and orientation stay null. The player-facing text may hedge one phrase about the choices (belonging versus quiet focus, for example) but must not build a story, use labels, or restate 'you both chose a place'. The summary is one short headline.",
   },
   {
     id: "non-english-answer",
@@ -58,6 +66,6 @@ export const EXPLANATION_CASES = [
         b: "A phoenix. It stays inside a mountain and only appears once a century, when a child who is meant to find it is born.",
       },
     },
-    review: "The summary is one complete sentence near the 100-character target, never cut off, and names the contrast between an everyday hidden presence and a rare, destined appearance.",
+    review: "The summary is one short headline under 60 characters, never cut off. The divergence can hedge a reading (an everyday hidden presence versus a rare, destined appearance) without fixed labels or stereotypes.",
   },
 ] as const;
