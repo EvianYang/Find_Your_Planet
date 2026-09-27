@@ -1,0 +1,137 @@
+/* RevealScreen (A). Nothing is sticky: the sky and the actions scroll with the content so long answers keep the reading area. */
+.fyp-reveal {
+  container-type: inline-size;
+  position: relative;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--fyp-bg);
+  color: var(--fyp-ink);
+  font-family: var(--fyp-font-body);
+}
+.fyp-reveal .fyp-sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.fyp-reveal :focus-visible { outline: 2px solid var(--fyp-ink); outline-offset: 3px; border-radius: 10px; }
+.rv-stage { position: relative; }
+.rv-skip {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  min-height: var(--fyp-touch-min);
+  min-width: var(--fyp-touch-min);
+  padding: 0 14px;
+  border-radius: var(--fyp-radius-pill);
+  border: 1px solid var(--fyp-line-strong);
+  background: rgba(11, 16, 32, 0.72);
+  color: var(--fyp-muted);
+  font: 500 13px/1 var(--fyp-font-body);
+  cursor: pointer;
+}
+.rv-sheet { padding: 22px 20px 0; display: flex; flex-direction: column; gap: 20px; flex: 1; }
+.rv-q { display: flex; flex-direction: column; gap: 6px; }
+.rv-round { margin: 0; font-size: 13px; line-height: 18px; color: var(--fyp-faint); font-weight: 500; }
+.rv-prompt { margin: 0; font-family: var(--fyp-font-display); font-size: 23px; line-height: 29px; font-weight: 500; letter-spacing: -0.01em; text-wrap: pretty; overflow-wrap: anywhere; }
+.rv-status { margin: -6px 0 0; font-size: 14px; line-height: 21px; color: var(--fyp-muted); }
+.rv-answers { display: flex; flex-direction: column; }
+.rv-sep { position: relative; height: 1px; margin: 18px 0; background: linear-gradient(90deg, transparent, var(--fyp-line) 12%, var(--fyp-line) 88%, transparent); }
+.rv-sep svg { position: absolute; left: 50%; top: 50%; width: 14px; height: 14px; transform: translate(-50%, -50%); background: var(--fyp-bg); padding: 0 3px; box-sizing: content-box; }
+.rv-interp { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.rv-summary { margin: 0; font-family: var(--fyp-font-display); font-size: 25px; line-height: 32px; font-weight: 500; letter-spacing: -0.012em; text-wrap: pretty; overflow-wrap: anywhere; }
+.rv-summary:focus { outline: none; }
+.rv-summary:focus-visible { outline: 2px solid var(--fyp-ink); outline-offset: 4px; }
+.rv-cap { margin: 0; display: flex; flex-direction: column; gap: 2px; font-size: 13px; line-height: 19px; color: var(--fyp-faint); }
+.rv-num { font: 500 13px var(--fyp-font-mono); color: var(--fyp-muted); }
+.rv-cap strong { font-size: 15px; line-height: 22px; color: var(--fyp-ink); font-weight: 600; }
+.rv-details { display: flex; flex-direction: column; gap: 14px; padding-top: 18px; border-top: 1px solid var(--fyp-line); }
+.rv-details-title { margin: 0; font-size: 13px; font-weight: 600; color: var(--fyp-faint); }
+.rv-group h3 { margin: 0 0 4px; display: flex; align-items: center; gap: 8px; font-size: 13px; line-height: 20px; font-weight: 650; color: var(--fyp-muted); }
+.rv-group h3 svg { width: 22px; height: 14px; flex: none; }
+.rv-group ul { margin: 0; padding: 0 0 0 30px; list-style: none; display: flex; flex-direction: column; gap: 4px; }
+.rv-group li,
+.rv-empty { font-size: 15px; line-height: 24px; overflow-wrap: anywhere; }
+.rv-empty { margin: 0; padding-left: 30px; color: var(--fyp-faint); font-size: 14px; }
+.rv-fail { display: flex; flex-direction: column; gap: 10px; padding: 18px; border-radius: var(--fyp-radius-panel); border: 1px solid var(--fyp-warn-line); background: var(--fyp-warn-tint); }
+.rv-fail h2 { margin: 0; display: flex; gap: 10px; align-items: flex-start; font-size: 16px; line-height: 23px; font-weight: 650; }
+.rv-fail h2 svg { flex: none; width: 20px; height: 20px; margin-top: 2px; }
+.rv-fail p { margin: 0; font-size: 14px; line-height: 22px; color: var(--fyp-muted); }
+.rv-fail .rv-fine { font-size: 13px; color: var(--fyp-faint); text-align: center; }
+.rv-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; padding: 6px 0 30px; }
+.rv-btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: var(--fyp-touch);
+  padding: 0 24px;
+  border: 0;
+  border-radius: var(--fyp-radius-pill);
+  font: 600 16px/1.2 var(--fyp-font-body);
+  cursor: pointer;
+  transition: transform 0.16s cubic-bezier(0.2, 0, 0, 1), background-color 0.16s;
+}
+.rv-btn:active { transform: scale(0.98); }
+.rv-btn--primary { background: var(--fyp-ink); color: var(--fyp-bg); }
+.rv-btn--primary:hover { background: #ffffff; }
+.rv-btn--secondary { background: transparent; color: var(--fyp-ink); border: 1px solid var(--fyp-line-strong); }
+.rv-btn[aria-disabled="true"] { cursor: progress; opacity: 0.82; }
+.rv-spin { width: 16px; height: 16px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: fyp-rv-spin 0.9s linear infinite; }
+.rv-error { margin: 0; display: flex; gap: 8px; align-items: flex-start; justify-content: center; font-size: 14px; line-height: 21px; color: var(--fyp-warn); text-align: left; }
+.rv-error svg { flex: none; width: 16px; height: 16px; margin-top: 2px; }
+.rv-hint,
+.rv-wait { margin: 0; display: flex; align-items: center; justify-content: center; gap: 10px; text-align: center; flex-wrap: wrap; }
+.rv-hint { font-size: 13px; line-height: 20px; color: var(--fyp-muted); }
+.rv-wait { min-height: var(--fyp-touch); padding: 12px 18px; border-radius: 26px; background: var(--fyp-soft); font-size: 15px; line-height: 22px; flex-wrap: nowrap; text-align: left; }
+.rv-hint svg,
+.rv-wait svg { width: 14px; height: 16px; flex: none; }
+.rv-wait:focus { outline: none; }
+.rv-wait:focus-visible { outline: 2px solid var(--fyp-ink); outline-offset: 3px; }
+
+/* Reveal: the original answers unfold, then the short summary, then the details; planets land from 860ms (PlanetPair). */
+.fyp-reveal--play .fyp-answer { animation: fyp-rv-unfold 560ms var(--fyp-ease-out) var(--fyp-t-answers) both; }
+.fyp-reveal--play .fyp-answer--b { animation-delay: calc(var(--fyp-t-answers) + 70ms); }
+.fyp-reveal--play .rv-sep { animation: fyp-rv-fade 400ms ease 120ms both; }
+.fyp-reveal--play .rv-summary { animation: fyp-rv-rise 520ms var(--fyp-ease-out) var(--fyp-t-summary) both; }
+.fyp-reveal--play .rv-cap--late { animation: fyp-rv-rise 300ms var(--fyp-ease-out) calc(var(--fyp-t-land) + 620ms) both; }
+.fyp-reveal--play .rv-details,
+.fyp-reveal--play .rv-actions { animation: fyp-rv-rise 400ms var(--fyp-ease-out) var(--fyp-t-details) both; }
+.fyp-reveal--fade .rv-answers,
+.fyp-reveal--fade .rv-interp,
+.fyp-reveal--fade .rv-details,
+.fyp-reveal--fade .rv-actions { animation: fyp-rv-fade var(--fyp-reduced-fade) linear both; }
+
+@keyframes fyp-rv-unfold {
+  from { opacity: 0; transform: translateY(-8px); clip-path: inset(0 0 100% 0); filter: blur(3px); }
+  to { opacity: 1; transform: none; clip-path: inset(0 0 0 0); filter: blur(0); }
+}
+@keyframes fyp-rv-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes fyp-rv-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fyp-rv-spin { to { transform: rotate(360deg); } }
+
+@container (max-width: 359px) {
+  .rv-sheet { padding: 18px 16px 0; gap: 18px; }
+  .rv-prompt { font-size: 21px; line-height: 27px; }
+  .rv-summary { font-size: 22px; line-height: 29px; }
+}
+@container (min-width: 720px) {
+  .rv-stage { width: 100%; max-width: 720px; margin: 0 auto; }
+  .rv-sheet { width: 100%; max-width: 960px; margin: 0 auto; padding: 30px 40px 0; gap: 26px; }
+  .rv-q { align-items: center; text-align: center; }
+  .rv-prompt { font-size: 31px; line-height: 38px; max-width: 760px; }
+  .rv-status { text-align: center; margin-top: -10px; }
+  .rv-answers { display: grid; grid-template-columns: 1fr auto 1fr; gap: 0 26px; align-items: start; }
+  .rv-sep { width: 1px; height: auto; align-self: stretch; margin: 0; background: linear-gradient(180deg, transparent, var(--fyp-line) 10%, var(--fyp-line) 90%, transparent); }
+  .rv-interp { align-items: center; text-align: center; max-width: 700px; margin: 0 auto; }
+  .rv-summary { font-size: 32px; line-height: 40px; }
+  .rv-cap { align-items: center; }
+  .rv-details { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+  .rv-details-title { grid-column: 1 / -1; }
+  .rv-fail { max-width: 640px; width: 100%; margin: 0 auto; }
+  .rv-actions { width: 100%; max-width: 360px; margin: 6px auto 0; padding-bottom: 48px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fyp-reveal--play *,
+  .rv-spin { animation: none !important; }
+  .rv-spin { border-right-color: currentColor; opacity: 0.6; }
+}

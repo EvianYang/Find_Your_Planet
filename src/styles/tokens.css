@@ -1,1 +1,52 @@
-/* SCAFFOLD ONLY — A：颜色、间距与排版 token。先读 docs/START_FRONTEND.md。 */
+/* Find Your Planet design tokens (A). Source: reveal prototype v0.4.
+ * Fonts fall back to system faces until B decides whether to self-host
+ * Bricolage Grotesque / Figtree / Caveat. */
+:root {
+  --fyp-bg: #0b1020;
+  --fyp-sky-top: #0a0f1e;
+  --fyp-sky-bottom: #101831;
+  --fyp-ink: #f7f4ee;
+  --fyp-muted: #c5c8d6;
+  --fyp-faint: #9aa0b5;
+  --fyp-line: rgba(247, 244, 238, 0.12);
+  --fyp-line-strong: rgba(247, 244, 238, 0.42);
+  --fyp-soft: rgba(247, 244, 238, 0.05);
+  --fyp-a: #91d8f7;
+  --fyp-a-shade: #4f97be;
+  --fyp-b: #d1b3fa;
+  --fyp-b-shade: #8f6fcb;
+  --fyp-warn: #f3c98b;
+  --fyp-warn-tint: rgba(243, 201, 139, 0.06);
+  --fyp-warn-line: rgba(243, 201, 139, 0.38);
+
+  --fyp-font-display: "Bricolage Grotesque Variable", "Bricolage Grotesque", system-ui, sans-serif;
+  --fyp-font-body: "Figtree Variable", "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --fyp-font-hand: "Caveat", "Bradley Hand", cursive;
+  --fyp-font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --fyp-radius-panel: 18px;
+  --fyp-radius-pill: 999px;
+  --fyp-touch: 52px;
+  --fyp-touch-min: 44px;
+
+  --fyp-space-1: 4px;
+  --fyp-space-2: 8px;
+  --fyp-space-3: 12px;
+  --fyp-space-4: 16px;
+  --fyp-space-5: 20px;
+  --fyp-space-6: 24px;
+  --fyp-space-8: 32px;
+
+  /* Reveal choreography: answers -> summary -> planets, about 1.9s total. */
+  --fyp-ease-out: cubic-bezier(0.22, 0.8, 0.24, 1);
+  --fyp-ease-x: cubic-bezier(0.33, 0.72, 0.2, 1);
+  --fyp-ease-y: cubic-bezier(0.45, 0, 0.2, 1);
+  --fyp-ease-y: linear(0, 0.16 10%, 0.5 24%, 0.84 38%, 1.03 52%, 1.045 60%, 1.015 72%, 0.998 86%, 1);
+  --fyp-t-answers: 40ms;
+  --fyp-t-summary: 460ms;
+  --fyp-t-details: 960ms;
+  --fyp-t-land: 860ms;
+  --fyp-d-land: 900ms;
+  --fyp-t-measure: 1460ms;
+  --fyp-reduced-fade: 180ms;
+}

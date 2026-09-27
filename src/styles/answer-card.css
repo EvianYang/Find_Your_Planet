@@ -1,0 +1,60 @@
+/* AnswerCard (A): no box. Glyph + coloured nickname + a thin rule beside the text. */
+.fyp-answer { --fyp-slot: var(--fyp-a); padding: 2px 0; }
+.fyp-answer--b { --fyp-slot: var(--fyp-b); }
+.fyp-answer-head { display: flex; align-items: center; gap: 8px; min-height: 28px; }
+.fyp-answer-glyph { width: 24px; height: 22px; flex: none; overflow: visible; }
+.fyp-answer-name {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 650;
+  color: var(--fyp-slot);
+  overflow-wrap: anywhere;
+}
+.fyp-answer-you {
+  flex: none;
+  font-size: 12px;
+  line-height: 20px;
+  padding: 0 8px;
+  border-radius: var(--fyp-radius-pill);
+  background: color-mix(in srgb, var(--fyp-slot) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--fyp-slot) 45%, transparent);
+}
+.fyp-answer-text {
+  margin: 8px 0 0 11px;
+  padding-left: 15px;
+  border-left: 2px solid color-mix(in srgb, var(--fyp-slot) 60%, transparent);
+  font-size: 17px;
+  line-height: 28px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.fyp-answer-note {
+  margin: 8px 0 0 11px;
+  padding-left: 17px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 19px;
+  color: var(--fyp-faint);
+}
+.fyp-answer-note svg { width: 16px; height: 12px; flex: none; }
+.fyp-answer--pending .fyp-answer-text {
+  border-left-style: dashed;
+  border-left-color: var(--fyp-line-strong);
+  color: var(--fyp-muted);
+  font-size: 15px;
+  line-height: 23px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.fyp-answer--pending .fyp-answer-text svg { width: 18px; height: 13px; flex: none; }
+
+@container (max-width: 359px) {
+  .fyp-answer-text { font-size: 16px; line-height: 26px; margin-left: 10px; padding-left: 12px; }
+  .fyp-answer-note { margin-left: 10px; padding-left: 14px; }
+}

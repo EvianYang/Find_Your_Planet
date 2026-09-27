@@ -1,0 +1,86 @@
+/* PlanetPair (A). Motion is CSS-only; the settled state is the default, animations are opt-in via .fyp-pp--play. */
+.fyp-pp {
+  position: relative;
+  margin: 0;
+  background: linear-gradient(180deg, var(--fyp-sky-top), var(--fyp-sky-bottom));
+}
+.fyp-pp svg {
+  display: block;
+  width: 100%;
+  aspect-ratio: 400 / 190;
+  overflow: hidden;
+}
+.fyp-pp .pp-x { transform: translate(calc(var(--x1) * 1px), 0); }
+.fyp-pp .pp-y { transform: translate(0, calc(var(--y1) * 1px)); }
+.fyp-pp .pp-env--opening,
+.fyp-pp .pp-signal--closing { opacity: 0; }
+.fyp-pp .pp-question { font-family: var(--fyp-font-hand); }
+
+.pp-legend {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 4px;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 18px;
+  pointer-events: none;
+  font: 500 17px/20px var(--fyp-font-hand);
+}
+.pp-legend span { min-width: 0; max-width: 46%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pp-legend-a { color: var(--fyp-a); }
+.pp-legend-b { color: var(--fyp-b); text-align: right; }
+
+/* Ambient layer: about 10% of the main motion, slow and out of sync, never a status signal. */
+.pp-float--a { animation: fyp-pp-float 5.2s ease-in-out infinite alternate; }
+.pp-float--b { animation: fyp-pp-float 6.4s ease-in-out -2s infinite alternate-reverse; }
+.pp-moonlet { transform-origin: 0 0; animation: fyp-pp-orbit 7.5s ease-in-out infinite alternate; }
+.pp-twinkle { animation: fyp-pp-twinkle 5.5s ease-in-out infinite; }
+
+/* Analyzing: two signal dashes travel the same arc in opposite directions and cross (a functional progress cue). */
+.pp-pulse { stroke-dasharray: 6 94; stroke-dashoffset: 6; animation: fyp-pp-pulse 2.9s ease-in-out infinite; }
+.fyp-pp--paused .pp-signal { opacity: 0.35; }
+
+/* Landing, delayed until after the answers and summary (see RevealScreen). */
+.fyp-pp--play .pp-x { animation: fyp-pp-x var(--fyp-d-land) var(--fyp-ease-x) var(--fyp-land-delay) both; }
+.fyp-pp--play .pp-y { animation: fyp-pp-y var(--fyp-d-land) var(--fyp-ease-y) var(--fyp-land-delay) both; }
+.fyp-pp--play .pp-env--opening { animation: fyp-pp-env-open 260ms ease-in both; }
+.fyp-pp--play .pp-signal--closing { animation: fyp-pp-fade-out 300ms ease-in both; }
+.fyp-pp--play .pp-measure-half {
+  stroke-dasharray: 1;
+  animation: fyp-pp-draw 340ms var(--fyp-ease-out) calc(var(--fyp-land-delay) + 600ms) both;
+}
+.fyp-pp--play .pp-ticks { animation: fyp-pp-fade 200ms ease calc(var(--fyp-land-delay) + 780ms) both; }
+.fyp-pp--play .pp-bridge { animation: fyp-pp-rise 400ms var(--fyp-ease-out) calc(var(--fyp-land-delay) + 680ms) both; }
+.fyp-pp--play .pp-ring { transform-box: fill-box; transform-origin: center; animation: fyp-pp-ring 500ms var(--fyp-ease-out) var(--fyp-land-delay) both; }
+.fyp-pp--play .pp-uncharted-loop { transform-box: fill-box; transform-origin: center; animation: fyp-pp-ring 500ms var(--fyp-ease-out) calc(var(--fyp-land-delay) + 100ms) both; }
+.fyp-pp--play .pp-question { animation: fyp-pp-rise 300ms var(--fyp-ease-out) calc(var(--fyp-land-delay) + 360ms) both; }
+.fyp-pp--play .pp-partial {
+  stroke-dasharray: 1;
+  animation: fyp-pp-draw 450ms var(--fyp-ease-out) calc(var(--fyp-land-delay) + 300ms) both;
+}
+.fyp-pp .pp-flag { transform-box: fill-box; transform-origin: 50% 100%; animation: fyp-pp-flag 380ms cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+@keyframes fyp-pp-x { from { transform: translate(calc(var(--x0) * 1px), 0); } to { transform: translate(calc(var(--x1) * 1px), 0); } }
+@keyframes fyp-pp-y { from { transform: translate(0, calc(var(--y0) * 1px)); } to { transform: translate(0, calc(var(--y1) * 1px)); } }
+@keyframes fyp-pp-float { from { transform: translateY(-1.6px); } to { transform: translateY(1.6px); } }
+@keyframes fyp-pp-orbit { from { transform: rotate(-18deg); } to { transform: rotate(22deg); } }
+@keyframes fyp-pp-twinkle { 0%, 100% { opacity: 0.2; } 50% { opacity: 0.85; } }
+@keyframes fyp-pp-pulse { 0% { stroke-dashoffset: 6; opacity: 0; } 10% { opacity: 1; } 85% { opacity: 1; } 100% { stroke-dashoffset: -100; opacity: 0; } }
+@keyframes fyp-pp-env-open { from { opacity: 1; transform: translate(0, -44px) scale(1); } to { opacity: 0; transform: translate(0, -50px) scale(0.8); } }
+@keyframes fyp-pp-fade-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes fyp-pp-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fyp-pp-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes fyp-pp-rise { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+@keyframes fyp-pp-ring { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: none; } }
+@keyframes fyp-pp-flag { from { opacity: 0; transform: scaleY(0.4); } to { opacity: 1; transform: none; } }
+
+@container (max-width: 359px) {
+  .pp-legend { padding: 0 12px; font-size: 16px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fyp-pp *,
+  .fyp-pp *::before { animation: none !important; }
+}

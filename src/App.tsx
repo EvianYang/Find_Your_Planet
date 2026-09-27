@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 
 import { PromptSchema } from "@contracts/game.ts";
 import type { IdentityProfile } from "@contracts/identity.ts";
@@ -10,6 +10,15 @@ import {
   verifyDirectProfileReadIsDenied,
 } from "./services/identity-client.ts";
 import { isSupabaseConfigured } from "./services/supabase-client.ts";
+import { GameApp, NotConfigured } from "./GameApp.tsx";
+
+// Demo-only previews (A); loaded on demand so they stay out of the main bundle.
+const DEMOS = {
+  game: lazy(() => import("./screens/GamePreview.tsx")),
+  screens: lazy(() => import("./screens/ScreensPreview.tsx")),
+  reveal: lazy(() => import("./screens/RevealPreview.tsx")),
+};
+const isDemo = (value: string | null): value is keyof typeof DEMOS => value !== null && Object.hasOwn(DEMOS, value);
 
 const contractExample = {
   id: "curated-01",
@@ -235,19 +244,14 @@ export default function App() {
     return <SupabasePreview />;
   }
 
-  return (
-    <main>
-      <h1>Find Your Planet</h1>
-      <p>The distance between two stars. The distance between two hearts.</p>
-      <p>The React, TypeScript, and Vite runtime is connected.</p>
-      <ul>
-        <li>
-          <a href="/?preview=contracts">Open the contracts preview</a>
-        </li>
-        <li>
-          <a href="/?preview=supabase">Open the Supabase identity preview</a>
-        </li>
-      </ul>
-    </main>
-  );
+  if (isDemo(preview)) {
+    const Demo = DEMOS[preview];
+    return (
+      <Suspense fallback={null}>
+        <Demo />
+      </Suspense>
+    );
+  }
+
+  return <div className="fyp-app">{isSupabaseConfigured() ? <GameApp /> : <NotConfigured />}</div>;
 }
